@@ -181,7 +181,7 @@ int main(int argc, char** argv){
 
 	ros::NodeHandle nh("~");
 
-	bool execute= nh.param<bool>("execute", false);
+	bool execute= nh.param<bool>("execute", true);
 
 	if(execute){
 		ROS_INFO("Going to execute first computed solution");
