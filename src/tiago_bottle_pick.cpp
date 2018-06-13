@@ -44,10 +44,29 @@ int main(int argc, char** argv){
 
 		moveit::planning_interface::PlanningSceneInterface psi;
 		cleanup();
+
 		std::vector<moveit_msgs::CollisionObject> objs;
-		setupTable(objs, glass);
 		setupObjects(objs, bottle, glass);
-		psi.applyCollisionObjects(objs);
+		objs.erase(objs.begin()+1);
+		setupTable(objs, glass);
+
+		std::vector<moveit_msgs::ObjectColor> colors;
+//		colors.emplace_back();
+//		colors.back().id= "glass";
+//		colors.back().color.a= 1;
+//		colors.back().color.r= 0;
+//		colors.back().color.g= .5;
+//		colors.back().color.b= .4;
+
+		colors.emplace_back();
+		colors.back().id= "table";
+		colors.back().color.a= 1;
+		colors.back().color.a= 1;
+		colors.back().color.r= .4;
+		colors.back().color.g= .2;
+		colors.back().color.b= .0;
+
+		psi.applyCollisionObjects(objs, colors);
 	}
 
 	Task t;
