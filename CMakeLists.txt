@@ -1,0 +1,24 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(tiago_barkeeper_mtc)
+
+add_compile_options(-std=c++14)
+
+find_package(catkin REQUIRED COMPONENTS
+	actionlib
+	moveit_ros_planning_interface
+	moveit_task_constructor_core
+	moveit_task_constructor_msgs
+	mtc_pour
+	roscpp
+	)
+
+catkin_package()
+
+include_directories(
+ include
+ ${catkin_INCLUDE_DIRS}
+)
+
+add_executable(tiago_bottle_pick src/tiago_bottle_pick.cpp)
+add_dependencies(tiago_bottle_pick ${catkin_EXPORTED_TARGETS})
+target_link_libraries(tiago_bottle_pick ${catkin_LIBRARIES})
