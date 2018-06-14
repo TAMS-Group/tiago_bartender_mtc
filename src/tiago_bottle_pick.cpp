@@ -42,8 +42,15 @@ int main(int argc, char** argv){
 		glass.pose.position.z= 0.7;
 		glass.pose.orientation.w= 1.0;
 
-		moveit::planning_interface::PlanningSceneInterface psi;
 		cleanup();
+
+		{
+			moveit::planning_interface::MoveGroupInterface mgi("arm_torso");
+			mgi.setNamedTarget("home");
+			mgi.move();
+		}
+
+		moveit::planning_interface::PlanningSceneInterface psi;
 
 		std::vector<moveit_msgs::CollisionObject> objs;
 		setupObjects(objs, bottle, glass);
