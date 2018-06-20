@@ -23,7 +23,7 @@
 using namespace moveit::task_constructor;
 
 int main(int argc, char** argv){
-	ros::init(argc, argv, "tiago_barkeeper");
+	ros::init(argc, argv, "tiago_bartender");
 
 	ros::AsyncSpinner spinner(1);
 	spinner.start();

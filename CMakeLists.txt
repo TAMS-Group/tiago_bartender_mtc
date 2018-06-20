@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(tiago_barkeeper_mtc)
+project(tiago_bartender_mtc)
 
 add_compile_options(-std=c++14)
 
