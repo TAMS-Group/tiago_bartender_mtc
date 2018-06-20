@@ -47,10 +47,10 @@ int main(int argc, char** argv){
 
 		std::vector<moveit_msgs::CollisionObject> objs;
 
-		setupObjects(objs, glass /* stub bottle pose */, glass);
+		mtc_pour::setupObjects(objs, glass /* stub bottle pose */, glass);
 		objs.erase(objs.begin()); // remove the bottle - assume it's attached
 
-		setupTable(objs, table);
+		mtc_pour::setupTable(objs, table);
 
 		std::vector<moveit_msgs::ObjectColor> colors;
 		colors.emplace_back();
@@ -155,7 +155,7 @@ int main(int argc, char** argv){
 	if(execute && t.numSolutions() > 0){
 		moveit_task_constructor_msgs::Solution solution;
 		t.solutions().front()->fillMessage(solution);
-		executeSolution(solution);
+		mtc_pour::executeSolution(solution);
 	}
 
 	std::cout << "waiting for <enter>" << std::endl;

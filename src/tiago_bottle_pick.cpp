@@ -42,7 +42,7 @@ int main(int argc, char** argv){
 		glass.pose.position.z= 0.7;
 		glass.pose.orientation.w= 1.0;
 
-		cleanup();
+		mtc_pour::cleanup();
 
 		{
 			moveit::planning_interface::MoveGroupInterface mgi("arm_torso");
@@ -53,9 +53,9 @@ int main(int argc, char** argv){
 		moveit::planning_interface::PlanningSceneInterface psi;
 
 		std::vector<moveit_msgs::CollisionObject> objs;
-		setupObjects(objs, bottle, glass);
+		mtc_pour::setupObjects(objs, bottle, glass);
 		objs.erase(objs.begin()+1);
-		setupTable(objs, glass);
+		mtc_pour::setupTable(objs, glass);
 
 		std::vector<moveit_msgs::ObjectColor> colors;
 //		colors.emplace_back();
@@ -210,7 +210,7 @@ int main(int argc, char** argv){
 	else {
 		moveit_task_constructor_msgs::Solution solution;
 		t.solutions().front()->fillMessage(solution);
-		executeSolution(solution);
+		mtc_pour::executeSolution(solution);
 	}
 
 	return 0;
