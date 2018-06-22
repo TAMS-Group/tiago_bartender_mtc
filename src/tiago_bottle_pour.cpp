@@ -71,6 +71,21 @@ int main(int argc, char** argv){
 	Task t;
 	t.loadRobotModel();
 
+	// don't spill liquid
+	moveit_msgs::Constraints upright_constraint;
+	upright_constraint.name = "gripper_grasping_frame:upright";
+	upright_constraint.orientation_constraints.resize(1);
+	{
+		moveit_msgs::OrientationConstraint& c= upright_constraint.orientation_constraints[0];
+		c.link_name= "gripper_grasping_frame";
+		c.header.frame_id= "base_footprint";
+		c.orientation.w= 1.0;
+		c.absolute_x_axis_tolerance= 0.65;
+		c.absolute_y_axis_tolerance= 0.65;
+		c.absolute_z_axis_tolerance= M_PI;
+		c.weight= 1.0;
+	}
+
 	auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
 	sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
 
@@ -93,6 +108,7 @@ int main(int argc, char** argv){
 	{
 		auto stage = std::make_unique<stages::Connect>("move to pre-pour pose", stages::Connect::GroupPlannerVector{{"arm_torso", sampling_planner}});
 		stage->setTimeout(15.0);
+		//stage->setPathConstraints(upright_constraint);
 		stage->properties().configureInitFrom(Stage::PARENT);
 		t.add(std::move(stage));
 	}
@@ -109,7 +125,7 @@ int main(int argc, char** argv){
 		stage->setMonitoredStage(current_state);
 
 		auto wrapper = std::make_unique<stages::ComputeIK>("pre-pour pose", std::move(stage) );
-		wrapper->setMaxIKSolutions(8);
+		wrapper->setMaxIKSolutions(32);
 		wrapper->setIKFrame("gripper_grasping_frame");
 		wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
 		t.add(std::move(wrapper));
