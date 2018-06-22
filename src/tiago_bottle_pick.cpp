@@ -79,8 +79,24 @@ int main(int argc, char** argv){
 	Task t;
 	t.loadRobotModel();
 
+	// don't spill liquid
+	moveit_msgs::Constraints upright_constraint;
+	upright_constraint.name = "gripper_grasping_frame:upright";
+	upright_constraint.orientation_constraints.resize(1);
+	{
+		moveit_msgs::OrientationConstraint& c= upright_constraint.orientation_constraints[0];
+		c.link_name= "gripper_grasping_frame";
+		c.header.frame_id= "base_footprint";
+		c.orientation.w= 1.0;
+		c.absolute_x_axis_tolerance= 0.65;
+		c.absolute_y_axis_tolerance= 0.65;
+		c.absolute_z_axis_tolerance= M_PI;
+		c.weight= 1.0;
+	}
+
 	auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
 	sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
+	sampling_planner->setProperty("timeout", 10.0);
 
 	auto cartesian_planner = std::make_shared<solvers::CartesianPath>();
 	cartesian_planner->setMaxVelocityScaling(.3);
@@ -177,12 +193,32 @@ int main(int argc, char** argv){
 		t.add(std::move(stage));
 	}
 
-//	{
-//		auto stage = std::make_unique<stages::MoveTo>("move home", sampling_planner);
-//		stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-//		stage->setGoal("transport");
-//		t.add(std::move(stage));
-//	}
+	{
+     //<group_state name="transport2" group="arm_torso">
+     //    <joint name="torso_lift_joint" value="0.23"/>
+     //    <joint name="arm_1_joint" value="0.19"/>
+     //    <joint name="arm_2_joint" value="0.15"/>
+     //    <joint name="arm_3_joint" value="-2.27"/>
+     //    <joint name="arm_4_joint" value="2.28"/>
+     //    <joint name="arm_5_joint" value="1.62"/>
+     //    <joint name="arm_6_joint" value="-0.65"/>
+     //    <joint name="arm_7_joint" value="2.03"/>
+     //</group_state>
+
+		auto stage = std::make_unique<stages::MoveTo>("move back", sampling_planner);
+		stage->properties().configureInitFrom(Stage::PARENT, {"group"});
+		stage->properties().set("timeout", 10.0);
+		stage->setPathConstraints(upright_constraint);
+		//stage->setIKFrame("gripper_grasp_frame");
+		//geometry_msgs::PointStamped point;
+		//point.header.frame_id= "base_footprint";
+		//point.point.x= .5;
+		//point.point.y= 0;
+		//point.point.z= 1.05;
+		//stage->setGoal(point);
+		stage->setGoal("transport2");
+		t.add(std::move(stage));
+	}
 
 	t.enableIntrospection();
 
@@ -197,21 +233,20 @@ int main(int argc, char** argv){
 	ROS_INFO_STREAM( t );
 
 	try {
-		t.plan();
+		t.plan(2);
 	}
 	catch(InitStageException& e){
 		ROS_ERROR_STREAM(e);
 	}
 
-	if(!execute){
-		std::cout << "waiting for <enter>" << std::endl;
-		std::cin.get();
-	}
-	else {
+	if(execute && t.numSolutions() > 0){
 		moveit_task_constructor_msgs::Solution solution;
 		t.solutions().front()->fillMessage(solution);
 		mtc_pour::executeSolution(solution);
 	}
+
+	std::cout << "waiting for <enter>" << std::endl;
+	std::cin.get();
 
 	return 0;
 }
