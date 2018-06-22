@@ -106,7 +106,7 @@ int main(int argc, char** argv){
 	if(execute && t.numSolutions() > 0){
 		moveit_task_constructor_msgs::Solution solution;
 		t.solutions().front()->fillMessage(solution);
-		executeSolution(solution);
+		mtc_pour::executeSolution(solution);
 	}
 
 	std::cout << "waiting for <enter>" << std::endl;
