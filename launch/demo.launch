@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="db" default="true"/>
+
+  <include file="$(find tiago_moveit_config)/launch/demo.launch">
+     <arg name="robot" value="steel" />
+  </include>
+  <param name="move_group/constraint_approximations_path" value="$(find tiago_barkeeper_mtc)/cadb" if="$(arg db)"/>
+</launch>
