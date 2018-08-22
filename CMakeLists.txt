@@ -35,3 +35,7 @@ target_link_libraries(tiago_bottle_pick ${catkin_LIBRARIES})
 add_executable(tiago_bottle_pour src/tiago_bottle_pour.cpp)
 add_dependencies(tiago_bottle_pour ${catkin_EXPORTED_TARGETS})
 target_link_libraries(tiago_bottle_pour ${catkin_LIBRARIES})
+
+add_executable(tiago_gripper_controller src/tiago_gripper_controller.cpp)
+add_dependencies(tiago_gripper_controller ${catkin_EXPORTED_TARGETS})
+target_link_libraries(tiago_gripper_controller ${catkin_LIBRARIES})
