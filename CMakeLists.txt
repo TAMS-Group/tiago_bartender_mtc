@@ -15,9 +15,19 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	)
 
-add_action_files(DIRECTORY action FILES PickBottle.action)
+add_action_files(DIRECTORY action FILES
+                 PickBottle.action
+                 Pour.action
+                 Place.action
+                 Pick.action)
 
-generate_messages(DEPENDENCIES actionlib_msgs)
+
+add_message_files(DIRECTORY msg FILES
+                 Result.msg)
+
+generate_messages(DEPENDENCIES
+                  actionlib_msgs
+                  geometry_msgs)
 
 catkin_package()
 
