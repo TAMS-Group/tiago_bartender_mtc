@@ -22,13 +22,18 @@
 
 using namespace moveit::task_constructor;
 
+const std::string BOTTLE="bottle_1";
+
 int main(int argc, char** argv){
 	ros::init(argc, argv, "tiago_bartender");
 
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
 
-	{
+	std::cout << "waiting for <enter>" << std::endl;
+	std::cin.get();
+
+	if(false){
 		geometry_msgs::PoseStamped bottle, glass;
 		bottle.header.frame_id= "base_footprint";
 		bottle.pose.position.x= 0.5;
@@ -145,21 +150,21 @@ int main(int argc, char** argv){
 		auto stage = std::make_unique<stages::GenerateGraspPose>("grasp work space pose");
 		stage->properties().configureInitFrom(Stage::PARENT);
 		stage->setNamedPose("open");
-		stage->setObject("bottle");
+		stage->setObject(BOTTLE);
 		stage->setAngleDelta(M_PI/6);
 
 		stage->setMonitoredStage(current_state);
 
 		auto wrapper = std::make_unique<stages::ComputeIK>("grasp pose", std::move(stage) );
 		wrapper->setMaxIKSolutions(8);
-		wrapper->setIKFrame(Eigen::Translation3d(0.05,0,0), "gripper_grasping_frame");
+		wrapper->setIKFrame(Eigen::Translation3d(0.05,0,-.09), "gripper_grasping_frame");
 		wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
 		t.add(std::move(wrapper));
 	}
 
 	{
 		auto stage = std::make_unique<stages::ModifyPlanningScene>("allow gripper->object collision");
-		stage->allowCollisions("bottle", t.getRobotModel()->getJointModelGroup("gripper")->getLinkModelNamesWithCollisionGeometry(), true);
+		stage->allowCollisions(BOTTLE, t.getRobotModel()->getJointModelGroup("gripper")->getLinkModelNamesWithCollisionGeometry(), true);
 		t.add(std::move(stage));
 	}
 
@@ -173,7 +178,7 @@ int main(int argc, char** argv){
 	Stage* object_grasped= nullptr;
 	{
 		auto stage = std::make_unique<stages::ModifyPlanningScene>("attach object");
-		stage->attachObject("bottle", "gripper_grasping_frame");
+		stage->attachObject(BOTTLE, "gripper_grasping_frame");
 		object_grasped= stage.get();
 		t.add(std::move(stage));
 	}
@@ -181,7 +186,7 @@ int main(int argc, char** argv){
 	{
 		auto stage = std::make_unique<stages::MoveRelative>("lift object", cartesian_planner);
 		stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-		stage->setMinMaxDistance(.05,.10);
+		stage->setMinMaxDistance(.01,.10);
 		stage->setIKFrame("gripper_grasping_frame");
 
 		stage->properties().set("marker_ns", "lift");
@@ -233,7 +238,7 @@ int main(int argc, char** argv){
 	ROS_INFO_STREAM( t );
 
 	try {
-		t.plan(2);
+		t.plan(1);
 	}
 	catch(InitStageException& e){
 		ROS_ERROR_STREAM(e);
