@@ -219,7 +219,7 @@ public:
 		if(execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS){
 			ROS_ERROR_STREAM("task execution failed and returned: " << execute_.getState().toString());
 			tiago_bartender_msgs::PickResult result;
-			result.result.result = tiago_bartender_msgs::ManipulationResult::INTERNAL_ERROR;
+			result.result.result = tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
 			as_.setAborted(result, "Execution failed");
 			return;
 		}
