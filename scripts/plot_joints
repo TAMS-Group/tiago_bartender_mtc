@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rosrun plotjuggler PlotJuggler -l `rospack find tiago_bartender_mtc`/data/tiago_joints.plotjuggler.xml

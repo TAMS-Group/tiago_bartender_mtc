@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root>
+ <tabbed_widget name="Main Window" parent="main_window">
+  <plotmatrix rows="3" tab_name="Arm" columns="3">
+   <plot row="0" col="0">
+    <range top="2.748890" bottom="0.000000" left="441.200521" right="461.100356"/>
+    <limitY min="0" max="2.74889"/>
+    <curve name="/joint_states/arm_1_joint/pos" G="0" B="255" R="0"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="0">
+    <range top="1.090830" bottom="-1.570800" left="441.200521" right="461.100356"/>
+    <limitY min="-1.5708" max="1.09083"/>
+    <curve name="/joint_states/arm_2_joint/pos" G="128" B="0" R="0"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="0">
+    <range top="1.570800" bottom="-3.534290" left="441.200521" right="461.100356"/>
+    <limitY min="-3.53429" max="1.5708"/>
+    <curve name="/joint_states/arm_3_joint/pos" G="0" B="0" R="255"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="0" col="1">
+    <range top="2.356190" bottom="-0.392699" left="441.200521" right="461.100356"/>
+    <limitY min="-0.392699" max="2.35619"/>
+    <curve name="/joint_states/arm_4_joint/pos" G="0" B="255" R="255"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="1">
+    <range top="2.094400" bottom="-2.094400" left="441.200521" right="461.100356"/>
+    <limitY min="-2.0944" max="2.0944"/>
+    <curve name="/joint_states/arm_5_joint/pos" G="0" B="128" R="0"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="1">
+    <range top="1.570800" bottom="-1.570800" left="441.200521" right="461.100356"/>
+    <limitY min="-1.5708" max="1.5708"/>
+    <curve name="/joint_states/arm_6_joint/pos" G="128" B="128" R="0"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="0" col="2">
+    <range top="1.309000" bottom="-1.309000" left="441.200521" right="461.100356"/>
+    <limitY min="-1.309" max="1.309"/>
+    <curve name="/joint_states/head_1_joint/pos" G="128" B="0" R="128"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="1" col="2">
+    <range top="0.785398" bottom="-1.047200" left="441.200521" right="461.100356"/>
+    <limitY min="-1.0472" max="0.785398"/>
+    <curve name="/joint_states/head_2_joint/pos" G="0" B="0" R="128"/>
+    <transform value="noTransform"/>
+   </plot>
+   <plot row="2" col="2">
+    <range top="2.094400" bottom="-2.094400" left="441.200521" right="461.100356"/>
+    <limitY min="-2.0944" max="2.0944"/>
+    <curve name="/joint_states/arm_7_joint/pos" G="160" B="164" R="160"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <plotmatrix rows="1" tab_name="Gripper" columns="1">
+   <plot row="0" col="0">
+    <range top="0.045000" bottom="-0.001000" left="438.300061" right="458.200127"/>
+    <limitY min="-0.001" max="0.045"/>
+    <curve name="/joint_states/gripper_left_finger_joint/pos" G="0" B="255" R="0"/>
+    <curve name="/joint_states/gripper_right_finger_joint/pos" G="128" B="0" R="0"/>
+    <transform value="noTransform"/>
+   </plot>
+  </plotmatrix>
+  <plotmatrix rows="1" tab_name="Robot Pose" columns="1">
+   <plot row="0" col="0">
+    <range top="0.850000" bottom="0.650000" left="-0.100000" right="0.100000"/>
+    <limitY min="0.65" max="0.85"/>
+    <curve name="/tf/base_footprint/translation/x" G="0" B="0" R="255"/>
+    <transform value="XYPlot" axisX="/tf/base_footprint/translation/y"/>
+   </plot>
+  </plotmatrix>
+  <currentPlotMatrix index="0"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="1"/>
+ <Plugins>
+  <DataLoad_CSV>
+   <default time_axis=""/>
+  </DataLoad_CSV>
+  <DataLoad_ROS_bags>
+   <selected_topics list=""/>
+  </DataLoad_ROS_bags>
+  <ROS_Topic_Streamer>
+   <selected_topics list="/joint_states;/tf"/>
+  </ROS_Topic_Streamer>
+  <RosoutPublisherROS/>
+  <TopicPublisherROS/>
+ </Plugins>
+ <previouslyLoadedStreamer name="ROS_Topic_Streamer"/>
+</root>
+
