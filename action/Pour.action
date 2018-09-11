@@ -1,6 +1,0 @@
-string container_id
-duration pouring_duration
----
-Result result
----
-string status

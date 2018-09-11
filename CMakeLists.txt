@@ -13,17 +13,13 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_task_constructor_msgs
 	mtc_pour
 	roscpp
-	)
+
+	tiago_bartender_msgs
+)
 
 add_action_files(DIRECTORY action FILES
-                 PickBottle.action
-                 Pour.action
-                 Place.action
-                 Pick.action)
-
-
-add_message_files(DIRECTORY msg FILES
-                 Result.msg)
+	PickBottle.action
+)
 
 generate_messages(DEPENDENCIES
                   actionlib_msgs
