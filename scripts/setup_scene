@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rosrun moveit_ros_planning moveit_publish_scene_from_text `rospack find tiago_bartender_mtc`/data/table_bar.scene
