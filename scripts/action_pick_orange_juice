@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import rospy
+import actionlib
+
+from tiago_bartender_msgs.msg import PickAction, PickGoal
+
+if __name__ == '__main__':
+	rospy.init_node('test_pick')
+	client = actionlib.SimpleActionClient('tiago_pick', PickAction)
+	client.wait_for_server()
+
+	goal = PickGoal(object_id= "orange_juice")
+	client.send_goal(goal)
+	client.wait_for_result(rospy.Duration(0.0))
+
+	print("State:")
+	print(client.get_state())
+	print()
+	print("Result:")
+	print(client.get_result())
