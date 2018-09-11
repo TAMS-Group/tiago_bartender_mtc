@@ -32,13 +32,30 @@ generate_messages(DEPENDENCIES
 catkin_package()
 
 include_directories(
- include
- ${catkin_INCLUDE_DIRS}
+	include
+	${catkin_INCLUDE_DIRS}
 )
 
+# action server
+
+add_executable(tiago_bottle_pick_server src/tiago_bottle_pick_server.cpp)
+add_dependencies(tiago_bottle_pick_server ${catkin_EXPORTED_TARGETS})
+target_link_libraries(tiago_bottle_pick_server ${catkin_LIBRARIES})
+
+# helpers
+
+# create constraint approximation db
 add_executable(tiago_bartender_construct_constraint_database src/construct_constraint_database.cpp)
 add_dependencies(tiago_bartender_construct_constraint_database ${catkin_EXPORTED_TARGETS})
 target_link_libraries(tiago_bartender_construct_constraint_database ${catkin_LIBRARIES})
+
+# wrapper for MoveIt's FollowJointTrajectory action
+
+add_executable(tiago_gripper_controller src/tiago_gripper_controller.cpp)
+add_dependencies(tiago_gripper_controller ${catkin_EXPORTED_TARGETS})
+target_link_libraries(tiago_gripper_controller ${catkin_LIBRARIES})
+
+# sample executables for individual testing
 
 add_executable(tiago_test_path_constraint src/tiago_test_path_constraint.cpp)
 add_dependencies(tiago_test_path_constraint ${catkin_EXPORTED_TARGETS})
@@ -48,14 +65,7 @@ add_executable(tiago_bottle_pick src/tiago_bottle_pick.cpp)
 add_dependencies(tiago_bottle_pick ${catkin_EXPORTED_TARGETS})
 target_link_libraries(tiago_bottle_pick ${catkin_LIBRARIES})
 
-add_executable(tiago_bottle_pick_server src/tiago_bottle_pick_server.cpp)
-add_dependencies(tiago_bottle_pick_server ${catkin_EXPORTED_TARGETS})
-target_link_libraries(tiago_bottle_pick_server ${catkin_LIBRARIES})
-
 add_executable(tiago_bottle_pour src/tiago_bottle_pour.cpp)
 add_dependencies(tiago_bottle_pour ${catkin_EXPORTED_TARGETS})
 target_link_libraries(tiago_bottle_pour ${catkin_LIBRARIES})
 
-add_executable(tiago_gripper_controller src/tiago_gripper_controller.cpp)
-add_dependencies(tiago_gripper_controller ${catkin_EXPORTED_TARGETS})
-target_link_libraries(tiago_gripper_controller ${catkin_LIBRARIES})
