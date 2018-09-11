@@ -103,6 +103,7 @@ public:
 			t.add(std::move(stage));
 		}
 
+		Stage* ik_state= nullptr;
 		{
 			auto stage = std::make_unique<stages::GenerateGraspPose>("grasp work space pose");
 			stage->properties().configureInitFrom(Stage::PARENT);
@@ -113,6 +114,7 @@ public:
 			stage->setMonitoredStage(current_state);
 
 			auto wrapper = std::make_unique<stages::ComputeIK>("grasp pose", std::move(stage) );
+			ik_state= wrapper.get();
 			wrapper->setMaxIKSolutions(8);
 			wrapper->setIKFrame(Eigen::Translation3d(0.05,0,-.09), "gripper_grasping_frame");
 			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
@@ -190,12 +192,18 @@ public:
 			return;
 		}
 
-		// TODO: check for UNREACHABLE
-
 		if(t.numSolutions() == 0){
 			tiago_bartender_msgs::PickResult result;
-			result.result.result = tiago_bartender_msgs::ManipulationResult::NO_PLAN_FOUND;
-			as_.setAborted(result, "Planning did not succeed");
+
+			if(ik_state->solutions().size() == 0){
+				result.result.result = tiago_bartender_msgs::ManipulationResult::UNREACHABLE;
+				as_.setAborted(result, "IK failed, is the object reachable?");
+			}
+			else {
+				result.result.result = tiago_bartender_msgs::ManipulationResult::NO_PLAN_FOUND;
+				as_.setAborted(result, "Planning failed");
+			}
+
 			return;
 		}
 
