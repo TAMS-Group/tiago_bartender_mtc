@@ -51,7 +51,8 @@ public:
 		//		return;
 		//	}
 
-		std::string object = goal->object_id;
+		const std::string object = goal->object_id;
+		const std::vector<std::string> supports {"table1", "table2", "table2"};
 
 		task_.reset( new moveit::task_constructor::Task );
 		Task& t= *task_;
@@ -143,6 +144,12 @@ public:
 		}
 
 		{
+			auto stage = std::make_unique<stages::ModifyPlanningScene>("allow (object,support) collision");
+			stage->allowCollisions({object}, supports, true);
+			t.add(std::move(stage));
+		}
+
+		{
 			auto stage = std::make_unique<stages::MoveRelative>("lift object", cartesian_planner);
 			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
 			stage->setMinMaxDistance(.01,.10);
@@ -158,19 +165,25 @@ public:
 		}
 
 		{
-			auto stage = std::make_unique<stages::MoveRelative>("retreat object", cartesian_planner);
-			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-			stage->setMinMaxDistance(0.01,0.10);
-			stage->setIKFrame("gripper_grasping_frame");
-
-			stage->properties().set("marker_ns", "retreat");
-
-			geometry_msgs::Vector3Stamped vec;
-			vec.header.frame_id= "base_footprint";
-			vec.vector.x= -1.0;
-			stage->along(vec);
+			auto stage = std::make_unique<stages::ModifyPlanningScene>("forbid (object,support) collision");
+			stage->allowCollisions({object}, supports, false);
 			t.add(std::move(stage));
 		}
+
+		//{
+		//	auto stage = std::make_unique<stages::MoveRelative>("retreat object", cartesian_planner);
+		//	stage->properties().configureInitFrom(Stage::PARENT, {"group"});
+		//	stage->setMinMaxDistance(0.01,0.10);
+		//	stage->setIKFrame("gripper_grasping_frame");
+
+		//	stage->properties().set("marker_ns", "retreat");
+
+		//	geometry_msgs::Vector3Stamped vec;
+		//	vec.header.frame_id= "base_footprint";
+		//	vec.vector.x= -1.0;
+		//	stage->along(vec);
+		//	t.add(std::move(stage));
+		//}
 
 		{
 			auto stage = std::make_unique<stages::MoveTo>("move home", sampling_planner);
