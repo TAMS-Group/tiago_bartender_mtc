@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="db" default="true"/>
+  <arg name="db" default="false"/>
 
   <include file="$(find tiago_moveit_config)/launch/demo.launch">
      <arg name="robot" value="steel" />
