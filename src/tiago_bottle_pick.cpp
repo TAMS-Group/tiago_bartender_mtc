@@ -142,14 +142,14 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped vec;
 		vec.header.frame_id = "gripper_grasping_frame";
 		vec.vector.x = 1.0;
-		stage->along(vec);
+		stage->setDirection(vec);
 		t.add(std::move(stage));
 	}
 
 	{
 		auto stage = std::make_unique<stages::GenerateGraspPose>("grasp work space pose");
 		stage->properties().configureInitFrom(Stage::PARENT);
-		stage->setNamedPose("open");
+		stage->setPreGraspPose("open");
 		stage->setObject(BOTTLE);
 		stage->setAngleDelta(M_PI/6);
 
@@ -194,7 +194,7 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped vec;
 		vec.header.frame_id= "base_footprint";
 		vec.vector.z= 1.0;
-		stage->along(vec);
+		stage->setDirection(vec);
 		t.add(std::move(stage));
 	}
 

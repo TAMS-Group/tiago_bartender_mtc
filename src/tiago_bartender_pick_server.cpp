@@ -100,7 +100,7 @@ public:
 			geometry_msgs::Vector3Stamped vec;
 			vec.header.frame_id = "gripper_grasping_frame";
 			vec.vector.x = 1.0;
-			stage->along(vec);
+			stage->setDirection(vec);
 			t.add(std::move(stage));
 		}
 
@@ -108,7 +108,7 @@ public:
 		{
 			auto stage = std::make_unique<stages::GenerateGraspPose>("grasp work space pose");
 			stage->properties().configureInitFrom(Stage::PARENT);
-			stage->setNamedPose("open");
+			stage->setPreGraspPose("open");
 			stage->setObject(object);
 			stage->setAngleDelta(M_PI/6);
 
@@ -119,6 +119,7 @@ public:
 			wrapper->setMaxIKSolutions(8);
 			wrapper->setIKFrame(Eigen::Translation3d(0.05,0,-.09), "gripper_grasping_frame");
 			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
+			wrapper->properties().configureInitFrom(Stage::INTERFACE, {"target_pose"});
 			t.add(std::move(wrapper));
 		}
 
@@ -160,7 +161,7 @@ public:
 			geometry_msgs::Vector3Stamped vec;
 			vec.header.frame_id= "base_footprint";
 			vec.vector.z= 1.0;
-			stage->along(vec);
+			stage->setDirection(vec);
 			t.add(std::move(stage));
 		}
 
@@ -181,7 +182,7 @@ public:
 		//	geometry_msgs::Vector3Stamped vec;
 		//	vec.header.frame_id= "base_footprint";
 		//	vec.vector.x= -1.0;
-		//	stage->along(vec);
+		//	stage->setDirection(vec);
 		//	t.add(std::move(stage));
 		//}
 

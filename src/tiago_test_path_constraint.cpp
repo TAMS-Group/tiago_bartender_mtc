@@ -77,7 +77,7 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped vec;
 		vec.header.frame_id = "base_footprint";
 		vec.vector.y = 1.0;
-		stage->along(vec);
+		stage->setDirection(vec);
 		t.add(std::move(stage));
 	}
 
