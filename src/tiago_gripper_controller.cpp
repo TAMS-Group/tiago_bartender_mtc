@@ -4,6 +4,10 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <sensor_msgs/JointState.h>
 
+//#include <pal_control_msgs/ActuatorCurrentLimit.h>
+
+#include <std_srvs/Empty.h>
+
 class TiagoGripperController
 {
 public:
@@ -13,6 +17,10 @@ public:
 
     as_ = boost::make_shared<actionlib::SimpleActionServer<control_msgs::FollowJointTrajectoryAction>>(nh_, "gripper_grasp_controller/follow_joint_trajectory", boost::bind(&TiagoGripperController::goal_cb, this, _1), false);
     ac_ = boost::make_shared<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>>("gripper_controller/follow_joint_trajectory", true);
+
+    grasp_ = nh_.serviceClient<std_srvs::Empty>("gripper_controller/grasp");
+    grasp_.waitForExistence();
+
     ac_->waitForServer();
     as_->start();
   }
@@ -45,6 +53,7 @@ private:
 
     ac_->sendGoal(*goal);
     control_msgs::FollowJointTrajectoryResult result;
+    // open the gripper
     if(direction >= 0.0)
     {
       ac_->waitForResult();
@@ -52,21 +61,26 @@ private:
     }
     else
     {
-      while(true)
-      {
-        if(finger_joint_effort_ < -15.0)
-        {
-          result.error_string = "stalled gripper detected";
-          result.error_code = control_msgs::FollowJointTrajectoryResult::SUCCESSFUL;
-          break;
-        }
-        if(ac_->getState().isDone())
-        {
-          result = *ac_->getResult();
-          break;
-        }
-        ros::Duration(0.01).sleep();
-      }
+      std_srvs::Empty srv;
+      grasp_.call(srv);
+//    TODO: is this needed?
+//      ros::Duration(0.5).sleep();
+
+//      while(true)
+//      {
+//        if(finger_joint_effort_ < -15.0)
+//        {
+//          result.error_string = "stalled gripper detected";
+//          result.error_code = control_msgs::FollowJointTrajectoryResult::SUCCESSFUL;
+//          break;
+//        }
+//        if(ac_->getState().isDone())
+//        {
+//          result = *ac_->getResult();
+//          break;
+//        }
+//        ros::Duration(0.01).sleep();
+//      }
     }
     as_->setSucceeded(result);
   }
@@ -74,6 +88,8 @@ private:
   ros::NodeHandle nh_;
   boost::shared_ptr<actionlib::SimpleActionServer<control_msgs::FollowJointTrajectoryAction>> as_;
   boost::shared_ptr<actionlib::SimpleActionClient<control_msgs::FollowJointTrajectoryAction>> ac_;
+
+  ros::ServiceClient grasp_;
 
   ros::Subscriber joint_states_sub_;
   double finger_joint_effort_;
