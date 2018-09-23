@@ -1,3 +1,16 @@
 #!/bin/sh
 
+rosservice call /apply_planning_scene "scene:
+  robot_state:
+    attached_collision_objects:
+    - object:
+        id: 'orange_juice'
+        operation: 1
+    is_diff: true
+  world:
+    collision_objects:
+    - id: 'orange_juice'
+      operation: 1
+  is_diff: true"
+
 rosrun moveit_ros_planning moveit_publish_scene_from_text `rospack find tiago_bartender_mtc`/data/table_bar.scene
