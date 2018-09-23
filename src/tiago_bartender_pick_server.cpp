@@ -162,6 +162,7 @@ public:
 			auto wrapper = std::make_unique<stages::ComputeIK>("grasp pose", std::move(stage) );
 			ik_state= wrapper.get();
 			wrapper->setMaxIKSolutions(8);
+			wrapper->setMinSolutionDistance(1.0);
 			wrapper->setIKFrame(Eigen::Translation3d(0.05,0,-.09), "gripper_grasping_frame");
 			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, {"target_pose"});
