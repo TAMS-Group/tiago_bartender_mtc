@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 
 #include <moveit/robot_model/robot_model.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <moveit/task_constructor/task.h>
 
@@ -12,6 +13,7 @@
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
 #include <moveit/task_constructor/stages/generate_pose.h>
+#include <moveit/task_constructor/stages/predicate_filter.h>
 
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
@@ -73,8 +75,20 @@ public:
 		Stage* current_state= nullptr;
 		{
 			auto _current_state = std::make_unique<stages::CurrentState>("current state");
-			current_state= _current_state.get();
-			t.add(std::move(_current_state));
+
+			auto applicability_filter = std::make_unique<stages::PredicateFilter>("applicability test", std::move(_current_state));
+			applicability_filter->setPredicate(
+				[object](const SolutionBase& s, std::string& comment){
+					if(s.start()->scene()->getCurrentState().hasAttachedBody(object)){
+						comment = "object with id '" + object + "' is already attached and cannot be picked";
+						return false;
+					}
+					return true;
+				}
+			);
+
+			current_state= applicability_filter.get();
+			t.add(std::move(applicability_filter));
 		}
 
 		{
