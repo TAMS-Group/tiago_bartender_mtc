@@ -134,6 +134,10 @@ public:
 			t.add(std::move(stage));
 		}
 
+		auto grasp = std::make_unique<SerialContainer>("grasp object");
+		t.properties().exposeTo(grasp->properties(), {"eef", "gripper"});
+		grasp->properties().configureInitFrom(Stage::PARENT, {"eef", "gripper"});
+
 		Stage* ik_state= nullptr;
 		{
 			auto stage = std::make_unique<stages::GenerateGraspPose>("grasp work space pose");
@@ -150,20 +154,20 @@ public:
 			wrapper->setIKFrame(Eigen::Translation3d(0.05,0,-.09), "gripper_grasping_frame");
 			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, {"target_pose"});
-			t.add(std::move(wrapper));
+			grasp->insert(std::move(wrapper));
 		}
 
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("allow gripper->object collision");
 			stage->allowCollisions(object, t.getRobotModel()->getJointModelGroup("gripper")->getLinkModelNamesWithCollisionGeometry(), true);
-			t.add(std::move(stage));
+			grasp->insert(std::move(stage));
 		}
 
 		{
 			auto stage = std::make_unique<stages::MoveTo>("close gripper", sampling_planner);
 			stage->properties().property("group").configureInitFrom(Stage::PARENT, "gripper");
 			stage->setGoal("closed");
-			t.add(std::move(stage));
+			grasp->insert(std::move(stage));
 		}
 
 		Stage* object_grasped= nullptr;
@@ -171,12 +175,24 @@ public:
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("attach object");
 			stage->attachObject(object, "gripper_grasping_frame");
 			object_grasped= stage.get();
-			t.add(std::move(stage));
+			grasp->insert(std::move(stage));
 		}
+
+		t.add(std::move(grasp));
+
+		// TODO: serial container fails to infer correct interfaces here
+		// Error initializing stages:
+		// lift off table: required interface is not satisfied
+		// lift off table: input interface of 'allow (object,support) collision' doesn't match mine
+
+		//auto lift = std::make_unique<SerialContainer>("lift off table");
+		//t.properties().exposeTo(lift->properties(), {"group"});
+		//lift->properties().configureInitFrom(Stage::PARENT, {"group"});
 
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("allow (object,support) collision");
 			stage->allowCollisions({object}, supports, true);
+			//lift->insert(std::move(stage));
 			t.add(std::move(stage));
 		}
 
@@ -192,14 +208,18 @@ public:
 			vec.header.frame_id= "base_footprint";
 			vec.vector.z= 1.0;
 			stage->setDirection(vec);
+			//lift->insert(std::move(stage));
 			t.add(std::move(stage));
 		}
 
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("forbid (object,support) collision");
 			stage->allowCollisions({object}, supports, false);
+			//lift->insert(std::move(stage));
 			t.add(std::move(stage));
 		}
+
+		//t.add(std::move(lift));
 
 		//{
 		//	auto stage = std::make_unique<stages::MoveRelative>("retreat object", cartesian_planner);
