@@ -30,6 +30,17 @@
 
 using namespace moveit::task_constructor;
 
+moveit_msgs::RobotState jointsToRS(std::vector<double> joint_positions){
+	moveit_msgs::RobotState rs;
+	rs.is_diff= true;
+	rs.joint_state.name = {"torso_lift_joint", "arm_1_joint", "arm_2_joint", "arm_3_joint", "arm_4_joint", "arm_5_joint", "arm_6_joint", "arm_7_joint"};
+	rs.joint_state.position = joint_positions;
+
+	assert(joint_positions.size() == rs.joint_state.name.size());
+
+	return rs;
+}
+
 class TiagoBartenderPick
 {
 public:
@@ -240,7 +251,8 @@ public:
 			auto stage = std::make_unique<stages::MoveTo>("move home", sampling_planner);
 			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
 			stage->setPathConstraints(upright_constraint_);
-			stage->setGoal("transport");
+			//stage->setGoal("transport");
+			stage->setGoal(jointsToRS( { 0.3, 0.2182262942567457, -0.07057563931682798, -1.2894996186397367, 2.3097855008155945, -1.568529541083217, 0.578567797265917, -1.8625135096142151} ));
 			t.add(std::move(stage));
 		}
 
