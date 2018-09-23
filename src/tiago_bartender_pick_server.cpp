@@ -39,6 +39,20 @@ public:
 	{
 		execute_.waitForServer();
 
+		// don't spill liquid
+		upright_constraint_.name = "gripper_grasping_frame:upright";
+		upright_constraint_.orientation_constraints.resize(1);
+		{
+			moveit_msgs::OrientationConstraint& c= upright_constraint_.orientation_constraints[0];
+			c.link_name= "gripper_grasping_frame";
+			c.header.frame_id= "base_footprint";
+			c.orientation.w= 1.0;
+			c.absolute_x_axis_tolerance= 0.65;
+			c.absolute_y_axis_tolerance= 0.65;
+			c.absolute_z_axis_tolerance= M_PI;
+			c.weight= 1.0;
+		}
+
 		//scene_client_ = nh_.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
 		as_.start();
 
@@ -205,7 +219,8 @@ public:
 		{
 			auto stage = std::make_unique<stages::MoveTo>("move home", sampling_planner);
 			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-			stage->setGoal("transport2");
+			stage->setPathConstraints(upright_constraint_);
+			stage->setGoal("transport");
 			t.add(std::move(stage));
 		}
 
@@ -269,6 +284,8 @@ private:
 	// latest task is retained until new one arrives
 	// to provide ROS interfaces for introspection
 	moveit::task_constructor::TaskPtr task_;
+
+	moveit_msgs::Constraints upright_constraint_;
 };
 
 
