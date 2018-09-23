@@ -41,6 +41,8 @@ public:
 
 		//scene_client_ = nh_.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
 		as_.start();
+
+		ROS_INFO("Bartender Pick action is available");
 	}
 
 	void pick_cb(const tiago_bartender_msgs::PickGoalConstPtr& goal)
@@ -56,7 +58,7 @@ public:
 		const std::string object = goal->object_id;
 		const std::vector<std::string> supports {"table1", "table2", "table2"};
 
-		task_.reset( new moveit::task_constructor::Task );
+		task_.reset( new moveit::task_constructor::Task("pick_object") );
 		Task& t= *task_;
 		t.loadRobotModel();
 
