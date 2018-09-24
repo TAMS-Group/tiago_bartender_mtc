@@ -266,22 +266,23 @@ public:
 				0.30, 0.13, -0.10, -1.47, 2.29, -1.66, 0.90, 1.43
 //				0.3, 0.2182262942567457, -0.07057563931682798, -1.2894996186397367, 2.3097855008155945, -1.568529541083217, 0.578567797265917, -1.8625135096142151
 				} ));
+			stage->restrictDirection(stages::MoveTo::FORWARD);
 
-			//auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
-			//valid_trajectory->setPredicate(
-			//	[object, this](const SolutionBase& s, std::string& comment){
-			//		robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
-			//		if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
-			//			comment = "trajectory does not keep joint upright";
-			//			return false;
-			//		}
-			//		return true;
-			//	}
-			//);
+			auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
+			t.properties().exposeTo(valid_trajectory->properties(), {"group"});
+			valid_trajectory->properties().configureInitFrom(Stage::PARENT, {"group"});
+			valid_trajectory->setPredicate(
+				[object, this](const SolutionBase& s, std::string& comment){
+					robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
+					if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
+						comment = "trajectory does not keep eef upright";
+						return false;
+					}
+					return true;
+				}
+			);
 
-			//t.add(std::move(valid_trajectory));
-
-			t.add(std::move(stage));
+			t.add(std::move(valid_trajectory));
 		}
 
 		t.enableIntrospection();
