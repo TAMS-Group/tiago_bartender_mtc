@@ -50,6 +50,8 @@ public:
 	{
 		execute_.waitForServer();
 
+		execute_solutions_= ros::NodeHandle("~").param<bool>("execute", true);
+
 		// don't spill liquid
 		upright_constraint_.name = "gripper_grasping_frame:upright";
 		upright_constraint_.orientation_constraints.resize(1);
@@ -294,18 +296,22 @@ public:
 		moveit_task_constructor_msgs::Solution solution;
 		t.solutions().front()->fillMessage(solution);
 
-		moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
-		execute_goal.task_solution = solution;
-		execute_.sendGoal(execute_goal);
-		execute_.waitForResult();
-		moveit_msgs::MoveItErrorCodes execute_result= execute_.getResult()->error_code;
+		ROS_INFO_STREAM( "last trajectory in solution:\n" << solution.sub_trajectory.back().trajectory );
 
-		if(execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS){
-			ROS_ERROR_STREAM("task execution failed and returned: " << execute_.getState().toString());
-			tiago_bartender_msgs::PickResult result;
-			result.result.result = tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
-			as_.setAborted(result, "Execution failed");
-			return;
+		if(execute_solutions_){
+			moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
+			execute_goal.task_solution = solution;
+			execute_.sendGoal(execute_goal);
+			execute_.waitForResult();
+			moveit_msgs::MoveItErrorCodes execute_result= execute_.getResult()->error_code;
+
+			if(execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS){
+				ROS_ERROR_STREAM("task execution failed and returned: " << execute_.getState().toString());
+				tiago_bartender_msgs::PickResult result;
+				result.result.result = tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
+				as_.setAborted(result, "Execution failed");
+				return;
+			}
 		}
 
 		tiago_bartender_msgs::PickResult result;
@@ -318,7 +324,9 @@ private:
 	actionlib::SimpleActionServer<tiago_bartender_msgs::PickAction> as_;
 
 	//ros::ServiceClient scene_update_client_;
-   actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
+	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
+
+	bool execute_solutions_;
 
 	// latest task is retained until new one arrives
 	// to provide ROS interfaces for introspection
