@@ -48,6 +48,7 @@ public:
 		as_(nh_, "tiago_pick", boost::bind(&TiagoBartenderPick::pick_cb, this, _1), false),
 		execute_("execute_task_solution", true)
 	{
+		ROS_INFO("waiting for task execution");
 		execute_.waitForServer();
 
 		execute_solutions_= ros::NodeHandle("~").param<bool>("execute", true);
@@ -70,6 +71,9 @@ public:
 		as_.start();
 
 		ROS_INFO("Bartender Pick action is available");
+		if(!execute_solutions_){
+			ROS_INFO("Planned trajectories will not be executed.");
+		}
 	}
 
 	void pick_cb(const tiago_bartender_msgs::PickGoalConstPtr& goal)
