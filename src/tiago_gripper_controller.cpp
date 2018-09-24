@@ -51,11 +51,12 @@ private:
       }
     }
 
-    ac_->sendGoal(*goal);
     control_msgs::FollowJointTrajectoryResult result;
+
     // open the gripper
     if(direction >= 0.0)
     {
+      ac_->sendGoal(*goal);
       ac_->waitForResult();
       result = *ac_->getResult();
     }
