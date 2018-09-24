@@ -316,7 +316,7 @@ public:
 		moveit_task_constructor_msgs::Solution solution;
 		t.solutions().front()->fillMessage(solution);
 
-		ROS_INFO_STREAM( "last trajectory in solution:\n" << solution.sub_trajectory.back().trajectory );
+		//ROS_INFO_STREAM( "last trajectory in solution:\n" << solution.sub_trajectory.back().trajectory );
 
 		if(execute_solutions_){
 			moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
