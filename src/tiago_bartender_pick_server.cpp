@@ -163,7 +163,10 @@ public:
 			ik_state= wrapper.get();
 			wrapper->setMaxIKSolutions(8);
 			wrapper->setMinSolutionDistance(1.0);
-			wrapper->setIKFrame(Eigen::Translation3d(0.05,0,-.09), "gripper_grasping_frame");
+			wrapper->setIKFrame(
+				Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX())*
+				Eigen::Translation3d(0.05,0,-.09),
+				"gripper_grasping_frame");
 			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, {"target_pose"});
 			grasp->insert(std::move(wrapper));
@@ -253,7 +256,10 @@ public:
 			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
 			stage->setPathConstraints(upright_constraint_);
 			//stage->setGoal("transport");
-			stage->setGoal(jointsToRS( { 0.3, 0.2182262942567457, -0.07057563931682798, -1.2894996186397367, 2.3097855008155945, -1.568529541083217, 0.578567797265917, -1.8625135096142151} ));
+			stage->setGoal(jointsToRS( {
+				0.30, 0.13, -0.10, -1.47, 2.29, -1.66, 0.90, 1.43
+//				0.3, 0.2182262942567457, -0.07057563931682798, -1.2894996186397367, 2.3097855008155945, -1.568529541083217, 0.578567797265917, -1.8625135096142151
+				} ));
 			t.add(std::move(stage));
 		}
 
