@@ -187,7 +187,7 @@ public:
 		{
 			auto stage = std::make_unique<stages::MoveTo>("close gripper", sampling_planner);
 			stage->properties().property("group").configureInitFrom(Stage::PARENT, "gripper");
-			stage->setGoal("closed");
+			stage->setGoal("grasped");
 			grasp->insert(std::move(stage));
 		}
 
