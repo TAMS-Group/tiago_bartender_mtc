@@ -2,6 +2,7 @@
 
 import rospy
 import actionlib
+import sys
 
 from tiago_bartender_msgs.msg import PickAction, PickGoal
 
@@ -10,7 +11,11 @@ if __name__ == '__main__':
 	client = actionlib.SimpleActionClient('tiago_pick', PickAction)
 	client.wait_for_server()
 
-	goal = PickGoal(object_id= "orange_juice")
+	if(len(sys.argv) > 1):
+		goal = PickGoal(object_id= sys.argv[1])
+	else:
+		goal = PickGoal(object_id= "orange")
+
 	client.send_goal(goal)
 	client.wait_for_result(rospy.Duration(0.0))
 
