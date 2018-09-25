@@ -1,9 +1,12 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="db" default="false"/>
-
   <include file="$(find tiago_moveit_config)/launch/demo.launch">
      <arg name="robot" value="steel" />
   </include>
-  <param name="move_group/constraint_approximations_path" value="$(find tiago_bartender_mtc)/cadb" if="$(arg db)"/>
+
+  <include file="$(find tiago_bartender_bringup)/launch/config_bringup.launch"/>
+
+  <include file="$(find tiago_bartender_bringup)/launch/world_link.launch"/>
+
+  <include file="$(find tiago_bartender_world)/launch/init_planning_scene.launch"/>
 </launch>
