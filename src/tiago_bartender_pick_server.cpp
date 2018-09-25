@@ -87,7 +87,7 @@ public:
 		//	}
 
 		const std::string object = goal->object_id;
-		const std::vector<std::string> supports {"table1", "table2", "table2"};
+		const std::vector<std::string> supports {"table1", "table2", "table3", "invisible_box"};
 
 		task_.reset( new moveit::task_constructor::Task("pick_object") );
 		Task& t= *task_;
