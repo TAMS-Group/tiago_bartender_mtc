@@ -171,7 +171,7 @@ public:
 			wrapper->setMinSolutionDistance(1.0);
 			wrapper->setIKFrame(
 				Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX())*
-				Eigen::Translation3d(0.05,0,-.09),
+				Eigen::Translation3d(0.05,0,-.04),
 				"gripper_grasping_frame");
 			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, {"target_pose"});
