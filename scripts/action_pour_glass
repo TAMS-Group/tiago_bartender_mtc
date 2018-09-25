@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+import rospy
+import actionlib
+import sys
+
+from tiago_bartender_msgs.msg import PourAction, PourGoal
+
+if __name__ == '__main__':
+	rospy.init_node('test_pour')
+	client = actionlib.SimpleActionClient('tiago_pour', PourAction)
+	client.wait_for_server()
+
+	goal = PourGoal(container_id= "glass", pouring_duration= rospy.Duration(1.0))
+
+	client.send_goal(goal)
+	client.wait_for_result(rospy.Duration(0.0))
+
+	print("State:")
+	print(client.get_state())
+	print()
+	print("Result:")
+	print(client.get_result())

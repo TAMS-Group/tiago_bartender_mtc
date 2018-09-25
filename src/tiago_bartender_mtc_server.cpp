@@ -3,6 +3,8 @@
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_scene/planning_scene.h>
 
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+
 #include <moveit/task_constructor/task.h>
 
 #include <moveit/task_constructor/stages/current_state.h>
@@ -26,6 +28,8 @@
 #include <actionlib/client/simple_action_client.h>
 
 #include <tiago_bartender_msgs/PickAction.h>
+#include <tiago_bartender_msgs/PourAction.h>
+
 #include <std_srvs/Empty.h>
 
 using namespace moveit::task_constructor;
@@ -41,11 +45,12 @@ moveit_msgs::RobotState jointsToRS(std::vector<double> joint_positions){
 	return rs;
 }
 
-class TiagoBartenderPick
+class TiagoBartender
 {
 public:
-	TiagoBartenderPick() :
-		as_(nh_, "tiago_pick", boost::bind(&TiagoBartenderPick::pick_cb, this, _1), false),
+	TiagoBartender() :
+		as_pick_(nh_, "tiago_pick", boost::bind(&TiagoBartender::pick_cb, this, _1), false),
+		as_pour_(nh_, "tiago_pour", boost::bind(&TiagoBartender::pour_cb, this, _1), false),
 		execute_("execute_task_solution", true)
 	{
 		ROS_INFO("waiting for task execution");
@@ -67,10 +72,19 @@ public:
 			c.weight= 1.0;
 		}
 
-		//scene_client_ = nh_.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
-		as_.start();
+		supports_ = std::vector<std::string>{"table1", "table2", "table3", "invisible_box"};
 
-		ROS_INFO("Bartender Pick action is available");
+		transport_pose_ = jointsToRS( {
+						0.30, 0.13, -0.10, -1.47, 2.29, -1.66, 0.90, 1.43
+						//0.3, 0.2182262942567457, -0.07057563931682798, -1.2894996186397367, 2.3097855008155945, -1.568529541083217, 0.578567797265917, -1.8625135096142151
+						} );
+		//scene_client_ = nh_.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
+
+		as_pick_.start();
+		as_pour_.start();
+
+		ROS_INFO("Bartender MTC actions are available");
+
 		if(!execute_solutions_){
 			ROS_INFO("Planned trajectories will not be executed.");
 		}
@@ -81,16 +95,7 @@ public:
 
 	void pick_cb(const tiago_bartender_msgs::PickGoalConstPtr& goal)
 	{
-		//	moveit_msgs::GetPlanningScene srv;
-		//	srv.components.components = 1023; // get *full* scene
-		//	if (!scene_client_.call(srv)){
-		//		ROS_ERROR("Failed to call service update_planning_scene");
-		//		as_.setAborted();
-		//		return;
-		//	}
-
 		const std::string object = goal->object_id;
-		const std::vector<std::string> supports {"table1", "table2", "table3", "invisible_box"};
 
 		task_.reset( new moveit::task_constructor::Task("pick_object") );
 		Task& t= *task_;
@@ -215,7 +220,7 @@ public:
 
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("allow (object,support) collision");
-			stage->allowCollisions({object}, supports, true);
+			stage->allowCollisions({object}, supports_, true);
 			//lift->insert(std::move(stage));
 			t.add(std::move(stage));
 		}
@@ -238,7 +243,7 @@ public:
 
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("forbid (object,support) collision");
-			stage->allowCollisions({object}, supports, false);
+			stage->allowCollisions({object}, supports_, false);
 			//lift->insert(std::move(stage));
 			t.add(std::move(stage));
 		}
@@ -265,17 +270,14 @@ public:
 			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
 			//stage->setPathConstraints(upright_constraint_);
 			//stage->setGoal("transport");
-			stage->setGoal(jointsToRS( {
-				0.30, 0.13, -0.10, -1.47, 2.29, -1.66, 0.90, 1.43
-//				0.3, 0.2182262942567457, -0.07057563931682798, -1.2894996186397367, 2.3097855008155945, -1.568529541083217, 0.578567797265917, -1.8625135096142151
-				} ));
+			stage->setGoal(transport_pose_);
 			stage->restrictDirection(stages::MoveTo::FORWARD);
 
 			auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
 			t.properties().exposeTo(valid_trajectory->properties(), {"group"});
 			valid_trajectory->properties().configureInitFrom(Stage::PARENT, {"group"});
 			valid_trajectory->setPredicate(
-				[object, this](const SolutionBase& s, std::string& comment){
+				[this](const SolutionBase& s, std::string& comment){
 					robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
 					if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
 						comment = "trajectory does not keep eef upright";
@@ -297,7 +299,7 @@ public:
 			ROS_ERROR_STREAM(e);
 			tiago_bartender_msgs::PickResult result;
 			result.result.result = tiago_bartender_msgs::ManipulationResult::INTERNAL_ERROR;
-			as_.setAborted(result, "Initialization failed");
+			as_pick_.setAborted(result, "Initialization failed");
 			return;
 		}
 
@@ -306,11 +308,11 @@ public:
 
 			if(ik_state->solutions().size() == 0){
 				result.result.result = tiago_bartender_msgs::ManipulationResult::UNREACHABLE;
-				as_.setAborted(result, "IK failed, is the object reachable?");
+				as_pick_.setAborted(result, "IK failed, is the object reachable?");
 			}
 			else {
 				result.result.result = tiago_bartender_msgs::ManipulationResult::NO_PLAN_FOUND;
-				as_.setAborted(result, "Planning failed");
+				as_pick_.setAborted(result, "Planning failed");
 			}
 
 			return;
@@ -332,22 +334,192 @@ public:
 				ROS_ERROR_STREAM("task execution failed and returned: " << execute_.getState().toString());
 				tiago_bartender_msgs::PickResult result;
 				result.result.result = tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
-				as_.setAborted(result, "Execution failed");
+				as_pick_.setAborted(result, "Execution failed");
 				return;
 			}
 		}
 
 		tiago_bartender_msgs::PickResult result;
 		result.result.result= tiago_bartender_msgs::ManipulationResult::SUCCESS;
-		as_.setSucceeded(result);
+		as_pick_.setSucceeded(result);
+	}
+
+	void pour_cb(const tiago_bartender_msgs::PourGoalConstPtr& goal)
+	{
+		const std::string container = goal->container_id;
+
+		std::map<std::string, moveit_msgs::AttachedCollisionObject> attached_objects = psi_.getAttachedObjects();
+		if(attached_objects.size() != 1){
+			ROS_ERROR_STREAM("Invalid request for PourAction - No bottle in gripper");
+			tiago_bartender_msgs::PourResult result;
+			result.result.result = tiago_bartender_msgs::ManipulationResult::INTERNAL_ERROR;
+			as_pour_.setAborted(result, "Invalid request - No bottle in gripper");
+			return;
+		}
+		const std::string bottle = attached_objects.begin()->first;
+
+		task_.reset( new moveit::task_constructor::Task("pour_to_glass") );
+		Task& t= *task_;
+		t.loadRobotModel();
+
+		auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
+		sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
+
+		auto cartesian_planner = std::make_shared<solvers::CartesianPath>();
+		cartesian_planner->setMaxVelocityScaling(1.0);
+		cartesian_planner->setMaxAccelerationScaling(1.0);
+		cartesian_planner->setStepSize(.002);
+
+		t.setProperty("group", "arm_torso");
+		t.setProperty("eef", "gripper");
+		t.setProperty("gripper", "gripper");
+
+		Stage* current_state= nullptr;
+		{
+			auto stage = std::make_unique<stages::CurrentState>("current state");
+			current_state= stage.get();
+			t.add(std::move(stage));
+		}
+
+		{
+			auto stage = std::make_unique<stages::Connect>("move to pre-pour pose", stages::Connect::GroupPlannerVector {{"arm_torso", sampling_planner}});
+			stage->properties().configureInitFrom(Stage::PARENT);
+			//t.add(std::move(stage));
+
+			auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
+			t.properties().exposeTo(valid_trajectory->properties(), {"group"});
+			valid_trajectory->properties().configureInitFrom(Stage::PARENT, {"group"});
+			valid_trajectory->setPredicate(
+				[this](const SolutionBase& s, std::string& comment){
+					robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
+					if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
+						comment = "trajectory does not keep eef upright";
+						return false;
+					}
+					return true;
+				}
+			);
+			t.add(std::move(valid_trajectory));
+		}
+
+		Stage* ik_state= nullptr;
+		{
+			auto stage = std::make_unique<stages::GeneratePose>("pose above glass");
+			geometry_msgs::PoseStamped p;
+			p.header.frame_id= container;
+			p.pose.orientation.w= 1;
+			p.pose.position.z= .3;
+			stage->setPose(p);
+			stage->properties().configureInitFrom(Stage::PARENT);
+
+			stage->setMonitoredStage(current_state);
+
+			auto wrapper = std::make_unique<stages::ComputeIK>("pre-pour pose", std::move(stage) );
+			wrapper->setMaxIKSolutions(32);
+			wrapper->setMinSolutionDistance(1.0);
+			wrapper->setIKFrame(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX()), "gripper_grasping_frame");
+			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"}); // TODO: convenience wrapper
+			wrapper->properties().configureInitFrom(Stage::INTERFACE, {"target_pose"});
+			ik_state= wrapper.get();
+			t.add(std::move(wrapper));
+		}
+
+		{
+			auto stage = std::make_unique<mtc_pour::PourInto>("pouring");
+			stage->setBottle(bottle);
+			stage->setContainer(container);
+			stage->setPourOffset(Eigen::Vector3d(0,0.015,0.035));
+			stage->setTiltAngle(2.0);
+			stage->setPourDuration(ros::Duration(goal->pouring_duration));
+			stage->properties().configureInitFrom(Stage::PARENT);
+			t.add(std::move(stage));
+		}
+
+		{
+			auto stage = std::make_unique<stages::MoveTo>("move home", sampling_planner);
+			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
+			//stage->setPathConstraints(upright_constraint_);
+			//stage->setGoal("transport");
+			stage->setGoal(transport_pose_);
+			stage->restrictDirection(stages::MoveTo::FORWARD);
+
+			auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
+			t.properties().exposeTo(valid_trajectory->properties(), {"group"});
+			valid_trajectory->properties().configureInitFrom(Stage::PARENT, {"group"});
+			valid_trajectory->setPredicate(
+				[this](const SolutionBase& s, std::string& comment){
+					robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
+					if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
+						comment = "trajectory does not keep eef upright";
+						return false;
+					}
+					return true;
+				}
+			);
+
+			t.add(std::move(valid_trajectory));
+		}
+
+		t.enableIntrospection();
+
+		try {
+			t.plan(1);
+		}
+		catch(InitStageException& e){
+			ROS_ERROR_STREAM(e);
+			tiago_bartender_msgs::PourResult result;
+			result.result.result = tiago_bartender_msgs::ManipulationResult::INTERNAL_ERROR;
+			as_pour_.setAborted(result, "Initialization failed");
+			return;
+		}
+
+		if(t.numSolutions() == 0){
+			tiago_bartender_msgs::PourResult result;
+
+			if(ik_state->solutions().size() == 0){
+				result.result.result = tiago_bartender_msgs::ManipulationResult::UNREACHABLE;
+				as_pour_.setAborted(result, "IK failed, is the countainer reachable?");
+			}
+			else {
+				result.result.result = tiago_bartender_msgs::ManipulationResult::NO_PLAN_FOUND;
+				as_pour_.setAborted(result, "Planning failed");
+			}
+
+			return;
+		}
+
+		moveit_task_constructor_msgs::Solution solution;
+		t.solutions().front()->fillMessage(solution);
+
+		if(execute_solutions_){
+			moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
+			execute_goal.task_solution = solution;
+			execute_.sendGoal(execute_goal);
+			execute_.waitForResult();
+			moveit_msgs::MoveItErrorCodes execute_result= execute_.getResult()->error_code;
+
+			if(execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS){
+				ROS_ERROR_STREAM("task execution failed and returned: " << execute_.getState().toString());
+				tiago_bartender_msgs::PourResult result;
+				result.result.result = tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
+				as_pour_.setAborted(result, "Execution failed");
+				return;
+			}
+		}
+
+		tiago_bartender_msgs::PourResult result;
+		result.result.result= tiago_bartender_msgs::ManipulationResult::SUCCESS;
+		as_pour_.setSucceeded(result);
 	}
 
 private:
 	ros::NodeHandle nh_;
-	actionlib::SimpleActionServer<tiago_bartender_msgs::PickAction> as_;
+	actionlib::SimpleActionServer<tiago_bartender_msgs::PickAction> as_pick_;
+	actionlib::SimpleActionServer<tiago_bartender_msgs::PourAction> as_pour_;
 
-	//ros::ServiceClient scene_update_client_;
 	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
+
+	moveit::planning_interface::PlanningSceneInterface psi_;
 
 	bool execute_solutions_;
 
@@ -356,13 +528,17 @@ private:
 	moveit::task_constructor::TaskPtr task_;
 
 	moveit_msgs::Constraints upright_constraint_;
+
+	std::vector<std::string> supports_;
+
+	moveit_msgs::RobotState transport_pose_;
 };
 
 
 int main(int argc, char** argv){
-	ros::init(argc, argv, "tiago_bartender_mtc_pick");
+	ros::init(argc, argv, "tiago_bartender_mtc_server");
 
-	TiagoBartenderPick tbp;
+	TiagoBartender tb;
 
 	ros::MultiThreadedSpinner spinner(2);
 	spinner.spin();
