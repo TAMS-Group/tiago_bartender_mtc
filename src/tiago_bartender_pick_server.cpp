@@ -74,6 +74,9 @@ public:
 		if(!execute_solutions_){
 			ROS_INFO("Planned trajectories will not be executed.");
 		}
+		else {
+			ROS_INFO("Solutions will be executed");
+		}
 	}
 
 	void pick_cb(const tiago_bartender_msgs::PickGoalConstPtr& goal)
