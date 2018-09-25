@@ -34,9 +34,9 @@ include_directories(
 
 # action server
 
-add_executable(tiago_bartender_pick_server src/tiago_bartender_pick_server.cpp)
-add_dependencies(tiago_bartender_pick_server ${catkin_EXPORTED_TARGETS})
-target_link_libraries(tiago_bartender_pick_server ${catkin_LIBRARIES})
+add_executable(tiago_bartender_mtc_server src/tiago_bartender_mtc_server.cpp)
+add_dependencies(tiago_bartender_mtc_server ${catkin_EXPORTED_TARGETS})
+target_link_libraries(tiago_bartender_mtc_server ${catkin_LIBRARIES})
 
 add_executable(tiago_bottle_pick_server src/tiago_bottle_pick_server.cpp)
 add_dependencies(tiago_bottle_pick_server ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
