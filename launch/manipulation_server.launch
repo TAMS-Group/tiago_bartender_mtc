@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="execute" default="true" />
+
+  <node name="manipulation_server" pkg="tiago_bartender_mtc" type="tiago_bartender_mtc_server" output="screen">
+    <param name="execute" value="$(arg execute)" />
+  </node>
+</launch>
