@@ -72,7 +72,7 @@ public:
 		table_height_= pnh.param<double>("table_height", 0.75); // TODO: load from bringup config
 
 		pre_pour_height_= pnh.param<double>("pre_pour_height", 0.3);
-		pour_angle_= pnh.param<double>("pour_angle_", 2.2);
+		pour_angle_= pnh.param<double>("pour_angle", 2.2);
 		lift_object_min_dist_= pnh.param<double>("lift_object_min_dist", 0.01);
 		lift_object_max_dist_= pnh.param<double>("lift_object_max_dist", 0.1);
 		approach_object_min_dist_= pnh.param<double>("approach_object_min_dist", 0.10);
