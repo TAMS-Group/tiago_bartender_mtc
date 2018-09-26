@@ -58,12 +58,29 @@ public:
 
 		ros::NodeHandle pnh("~");
 
-		execute_solutions_=pnh.param<bool>("execute", true);
+		execute_solutions_= pnh.param<bool>("execute", true);
 
+		// general parameters
 		pourer_length_= pnh.param<double>("pourer_length", 0.015);
+		pre_pour_height_= pnh.param<double>("pre_pour_height", 0.3);
+		pour_angle_= pnh.param<double>("pour_angle_", 2.2);
+		lift_object_min_dist_= pnh.param<double>("lift_object_min_dist", 0.01);
+		lift_object_max_dist_= pnh.param<double>("lift_object_max_dist", 0.1);
+		approach_object_min_dist_= pnh.param<double>("approach_object_min_dist", 0.10);
+		approach_object_max_dist_= pnh.param<double>("approach_object_max_dist", 0.15);
+
+		// compute gripper grasp frame depending on pourer length
 		double grasp_offset_x= pnh.param<double>("grasp_offset_x", 0.04);
-		double grasp_offset_z= pnh.param<double>("prasp_offset_z", 0.5 * pourer_length_);
-		grasp_offsets_= Eigen::Translation3d(grasp_offset_x,0,grasp_offset_z);
+		double grasp_offset_z= pnh.param<double>("prasp_offset_z", 0.0) + 0.5 * pourer_length_;
+		grasp_frame_transform_= Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX())*
+			Eigen::Translation3d(grasp_offset_x,0,grasp_offset_z);
+
+		// compute pour offset from glass depending on pourer length and pour angle
+		double pour_offset_x= pnh.param<double>("pour_offset_x", 0.02);
+		double pour_offset_z= pnh.param<double>("pour_offset_z", 0.025);
+		double p_x= std::abs(std::sin(pour_angle_) * pourer_length_);
+		double p_z= std::abs(std::cos(pour_angle_) * pourer_length_);
+		pour_offset_= Eigen::Vector3d(0,pour_offset_x + p_x, pour_offset_z + p_z);
 
 
 		// don't spill liquid
@@ -158,7 +175,7 @@ public:
 			stage->properties().set("marker_ns", "approach");
 			stage->properties().set("link", "gripper_grasping_frame");
 			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-			stage->setMinMaxDistance(.10, .15);
+			stage->setMinMaxDistance(approach_object_min_dist_, approach_object_max_dist_);
 
 			geometry_msgs::Vector3Stamped vec;
 			vec.header.frame_id = "gripper_grasping_frame";
@@ -185,10 +202,7 @@ public:
 			ik_state= wrapper.get();
 			wrapper->setMaxIKSolutions(8);
 			wrapper->setMinSolutionDistance(1.0);
-			wrapper->setIKFrame(
-				Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX())*
-				grasp_offsets_,
-				"gripper_grasping_frame");
+			wrapper->setIKFrame(grasp_frame_transform_, "gripper_grasping_frame");
 			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, {"target_pose"});
 			grasp->insert(std::move(wrapper));
@@ -236,7 +250,7 @@ public:
 		{
 			auto stage = std::make_unique<stages::MoveRelative>("lift object", cartesian_planner);
 			stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-			stage->setMinMaxDistance(.01,.10);
+			stage->setMinMaxDistance(lift_object_min_dist_,lift_object_max_dist_);
 			stage->setIKFrame("gripper_grasping_frame");
 
 			stage->properties().set("marker_ns", "lift");
@@ -416,7 +430,7 @@ public:
 			geometry_msgs::PoseStamped p;
 			p.header.frame_id= container;
 			p.pose.orientation.w= 1;
-			p.pose.position.z= .3;
+			p.pose.position.z= pre_pour_height_;
 			stage->setPose(p);
 			stage->properties().configureInitFrom(Stage::PARENT);
 
@@ -425,9 +439,7 @@ public:
 			auto wrapper = std::make_unique<stages::ComputeIK>("pre-pour pose", std::move(stage) );
 			wrapper->setMaxIKSolutions(32);
 			wrapper->setMinSolutionDistance(1.0);
-			wrapper->setIKFrame(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX())*
-                                grasp_offsets_,
-                                "gripper_grasping_frame");
+			wrapper->setIKFrame(grasp_frame_transform_, "gripper_grasping_frame");
 			wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"}); // TODO: convenience wrapper
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, {"target_pose"});
 			ik_state= wrapper.get();
@@ -438,11 +450,8 @@ public:
 			auto stage = std::make_unique<mtc_pour::PourInto>("pouring");
 			stage->setBottle(bottle);
 			stage->setContainer(container);
-			double tilt_angle = 2.2;
-			double p_x = std::abs(std::sin(tilt_angle) * pourer_length_);
-			double p_z = std::abs(std::cos(tilt_angle) * pourer_length_);
-			stage->setPourOffset(Eigen::Vector3d(0,0.02 + p_x, 0.025 + p_z));
-			stage->setTiltAngle(2.0);
+			stage->setPourOffset(pour_offset_);
+			stage->setTiltAngle(pour_angle_);
 			stage->setPourDuration(ros::Duration(goal->pouring_duration));
 			stage->properties().configureInitFrom(Stage::PARENT);
 			t.add(std::move(stage));
@@ -547,8 +556,18 @@ private:
 
 	moveit_msgs::RobotState transport_pose_;
 
+
+	// ros params
 	double pourer_length_;
-	Eigen::Translation3d grasp_offsets_;
+	double pre_pour_height_;
+	double pour_angle_;
+	double lift_object_min_dist_;
+	double lift_object_max_dist_;
+	double approach_object_min_dist_;
+	double approach_object_max_dist_;
+
+	Eigen::Affine3d grasp_frame_transform_;
+	Eigen::Vector3d pour_offset_;
 };
 
 

@@ -1,0 +1,25 @@
+# bottle pourer offset
+pourer_length: 0.015
+
+# vertical offset of bottle above the glass
+pre_pour_height: 0.3
+
+# final pouring angle
+pour_angle: 2.1
+
+# pour offset from the center of the glass top
+pour_offset_x: 0.02 # horizontal
+pour_offset_z: 0.025 # vertical
+
+
+# gripper grasp frame offset
+grasp_offset_x: 0.04 # horizontal
+grasp_offset_z: 0.0 # vertical
+
+# valid distance range when approaching an object for picking
+approach_object_min_dist: 0.10
+approach_object_max_dist: 0.15
+
+# valid height range when lifting an object after pick
+lift_object_min_dist: 0.01
+lift_object_max_dist: 0.1

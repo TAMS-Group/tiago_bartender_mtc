@@ -4,5 +4,6 @@
 
   <node name="manipulation_server" pkg="tiago_bartender_mtc" type="tiago_bartender_mtc_server" output="screen">
     <param name="execute" value="$(arg execute)" />
+    <rosparam command="load" file="$(find tiago_bartender_mtc)/config/pouring.yaml" />
   </node>
 </launch>
