@@ -118,6 +118,25 @@ public:
 		}
 	}
 
+	std::unique_ptr<stages::PredicateFilter> filter_upright(moveit::task_constructor::Task& t, std::unique_ptr<Stage>&& stage){
+		auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
+		t.properties().exposeTo(valid_trajectory->properties(), {"group"});
+		valid_trajectory->properties().configureInitFrom(Stage::PARENT, {"group"});
+		valid_trajectory->setPredicate(
+			[this](const SolutionBase& s, std::string& comment){
+				robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
+				if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
+					comment = "trajectory does not keep eef upright";
+					return false;
+				}
+				return true;
+			}
+		);
+		return std::move( valid_trajectory );
+	}
+
+
+
 	void pick_cb(const tiago_bartender_msgs::PickGoalConstPtr& goal)
 	{
 		const std::string object = goal->object_id;
@@ -221,11 +240,9 @@ public:
 			grasp->insert(std::move(stage));
 		}
 
-		Stage* object_grasped= nullptr;
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("attach object");
 			stage->attachObject(object, "gripper_grasping_frame");
-			object_grasped= stage.get();
 			grasp->insert(std::move(stage));
 		}
 
@@ -295,21 +312,7 @@ public:
 			stage->setGoal(transport_pose_);
 			stage->restrictDirection(stages::MoveTo::FORWARD);
 
-			auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
-			t.properties().exposeTo(valid_trajectory->properties(), {"group"});
-			valid_trajectory->properties().configureInitFrom(Stage::PARENT, {"group"});
-			valid_trajectory->setPredicate(
-				[this](const SolutionBase& s, std::string& comment){
-					robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
-					if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
-						comment = "trajectory does not keep eef upright";
-						return false;
-					}
-					return true;
-				}
-			);
-
-			t.add(std::move(valid_trajectory));
+			t.add( filter_upright( t, std::move(stage) ) );
 		}
 
 		t.enableIntrospection();
@@ -408,20 +411,7 @@ public:
 			stage->properties().configureInitFrom(Stage::PARENT);
 			//t.add(std::move(stage));
 
-			auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
-			t.properties().exposeTo(valid_trajectory->properties(), {"group"});
-			valid_trajectory->properties().configureInitFrom(Stage::PARENT, {"group"});
-			valid_trajectory->setPredicate(
-				[this](const SolutionBase& s, std::string& comment){
-					robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
-					if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
-						comment = "trajectory does not keep eef upright";
-						return false;
-					}
-					return true;
-				}
-			);
-			t.add(std::move(valid_trajectory));
+			t.add( filter_upright( t, std::move(stage) ) );
 		}
 
 		Stage* ik_state= nullptr;
@@ -465,21 +455,7 @@ public:
 			stage->setGoal(transport_pose_);
 			stage->restrictDirection(stages::MoveTo::FORWARD);
 
-			auto valid_trajectory = std::make_unique<stages::PredicateFilter>("validate upright", std::move(stage));
-			t.properties().exposeTo(valid_trajectory->properties(), {"group"});
-			valid_trajectory->properties().configureInitFrom(Stage::PARENT, {"group"});
-			valid_trajectory->setPredicate(
-				[this](const SolutionBase& s, std::string& comment){
-					robot_trajectory::RobotTrajectoryConstPtr trajectory= dynamic_cast<const SubTrajectory*>(&s)->trajectory();
-					if(!s.start()->scene()->isPathValid(*trajectory, this->upright_constraint_)){
-						comment = "trajectory does not keep eef upright";
-						return false;
-					}
-					return true;
-				}
-			);
-
-			t.add(std::move(valid_trajectory));
+			t.add( filter_upright( t, std::move(stage) ) );
 		}
 
 		t.enableIntrospection();
