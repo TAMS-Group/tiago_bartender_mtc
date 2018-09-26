@@ -97,8 +97,8 @@ public:
 	{
 		const std::string object = goal->object_id;
 
-		task_.reset( new moveit::task_constructor::Task("pick_object") );
-		Task& t= *task_;
+		pick_task_.reset( new moveit::task_constructor::Task("pick_object") );
+		Task& t= *pick_task_;
 		t.loadRobotModel();
 
 		auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
@@ -358,8 +358,8 @@ public:
 		}
 		const std::string bottle = attached_objects.begin()->first;
 
-		task_.reset( new moveit::task_constructor::Task("pour_to_glass") );
-		Task& t= *task_;
+		pour_task_.reset( new moveit::task_constructor::Task("pour_to_glass") );
+		Task& t= *pour_task_;
 		t.loadRobotModel();
 
 		auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
@@ -523,9 +523,10 @@ private:
 
 	bool execute_solutions_;
 
-	// latest task is retained until new one arrives
+	// latest tasks are retained until new ones arrive
 	// to provide ROS interfaces for introspection
-	moveit::task_constructor::TaskPtr task_;
+	moveit::task_constructor::TaskPtr pick_task_;
+	moveit::task_constructor::TaskPtr pour_task_;
 
 	moveit_msgs::Constraints upright_constraint_;
 
