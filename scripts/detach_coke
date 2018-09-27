@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+
+import rospy
+import actionlib
+import sys
+
+import moveit_commander
+
+import moveit_msgs
+import moveit_msgs.srv
+from moveit_msgs.msg import AttachedCollisionObject, CollisionObject
+
+if __name__ == '__main__':
+    rospy.init_node('test_place')
+
+    psi = moveit_commander.PlanningSceneInterface()
+
+    objects = psi.get_attached_objects(['coke'])
+
+    if 'coke' in objects:
+        coke = objects['coke']
+
+	coke.object.operation = CollisionObject.REMOVE
+
+        scene = moveit_msgs.msg.PlanningScene()
+        scene.is_diff = True
+        scene.robot_state.is_diff = True
+        scene.robot_state.attached_collision_objects.append(coke)
+        apply_planning_scene = rospy.ServiceProxy("apply_planning_scene", moveit_msgs.srv.ApplyPlanningScene)
+        rs = apply_planning_scene.call(scene)
+        print(rs)
+    else:
+        print('coke object not found')
