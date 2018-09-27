@@ -80,6 +80,7 @@ public:
 
     pre_pour_height_ = pnh.param<double>("pre_pour_height", 0.3);
     pour_angle_ = pnh.param<double>("pour_angle", 2.2);
+    pour_waypoint_duration_ = pnh.param<double>("pour_waypoint_duration", 0.5);
     min_pour_path_fraction_ = pnh.param<double>("min_pour_path_fraction", 0.9);
 
     lift_object_min_dist_ = pnh.param<double>("lift_object_min_dist", 0.01);
@@ -531,6 +532,7 @@ public:
       stage->setTiltAngle(pour_angle_);
       stage->setMinPathFraction(min_pour_path_fraction_);
       stage->setPourDuration(ros::Duration(goal->pouring_duration));
+      stage->setWaypointDuration(ros::Duration(pour_waypoint_duration_));
       stage->properties().configureInitFrom(Stage::PARENT);
       t.add(std::move(stage));
     }
@@ -1281,6 +1283,7 @@ private:
 
   double pre_pour_height_;
   double pour_angle_;
+  double pour_waypoint_duration_;
   double min_pour_path_fraction_;
   double approach_object_min_dist_;
   double approach_object_max_dist_;
