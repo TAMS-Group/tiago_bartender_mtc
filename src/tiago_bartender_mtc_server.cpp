@@ -80,6 +80,8 @@ public:
 
     pre_pour_height_ = pnh.param<double>("pre_pour_height", 0.3);
     pour_angle_ = pnh.param<double>("pour_angle", 2.2);
+    min_pour_path_fraction_ = pnh.param<double>("min_pour_path_fraction", 0.9);
+
     lift_object_min_dist_ = pnh.param<double>("lift_object_min_dist", 0.01);
     lift_object_max_dist_ = pnh.param<double>("lift_object_max_dist", 0.1);
     approach_object_min_dist_ =
@@ -527,6 +529,7 @@ public:
       stage->setContainer(container);
       stage->setPourOffset(pour_offset_);
       stage->setTiltAngle(pour_angle_);
+      stage->setMinPathFraction(min_pour_path_fraction_);
       stage->setPourDuration(ros::Duration(goal->pouring_duration));
       stage->properties().configureInitFrom(Stage::PARENT);
       t.add(std::move(stage));
@@ -1278,6 +1281,7 @@ private:
 
   double pre_pour_height_;
   double pour_angle_;
+  double min_pour_path_fraction_;
   double approach_object_min_dist_;
   double approach_object_max_dist_;
   double lift_object_min_dist_;

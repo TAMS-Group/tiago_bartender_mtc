@@ -7,6 +7,8 @@ pre_pour_height: 0.3
 
 # final pouring angle
 pour_angle: 2.1
+# min valid fraction of cartesian pour path
+min_pour_path_fraction: 0.9
 
 # pour offset from the center of the glass top
 pour_offset_x: 0.02 # horizontal
