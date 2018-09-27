@@ -8,7 +8,7 @@ pre_pour_height: 0.3
 # final pouring angle
 pour_angle: 2.1
 # duration between pouring waypoints in seconds
-pour_waypoint_duration: 0.5
+pour_waypoint_duration: 0.6
 # min valid fraction of cartesian pour path
 min_pour_path_fraction: 0.9
 
