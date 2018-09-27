@@ -669,7 +669,7 @@ public:
           }
 
           joint_trajectory_2.points[pi].time_from_start =
-              joint_trajectory.points[pi].time_from_start + ros::Duration(1.0);
+              joint_trajectory.points[pi].time_from_start + ros::Duration(5.0);
         }
 
         ROS_INFO("bla 5");
@@ -678,7 +678,7 @@ public:
 
         ROS_INFO("bla 6");
 
-        (ros::Duration(1.0) +
+        (ros::Duration(3.0) +
          ros::Duration(joint_trajectory_2.points.back().time_from_start))
             .sleep();
       }
