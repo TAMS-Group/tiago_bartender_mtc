@@ -190,6 +190,16 @@ public:
 		}
 
 		{
+			auto stage = std::make_unique<stages::MoveTo>("grow tall", sampling_planner);
+			stage->properties().configureInitFrom(Stage::PARENT, {"torso"});
+			stage->setGroup("torso");
+			stage->setGoal("tall");
+			stage->restrictDirection(stages::MoveTo::FORWARD);
+
+			t.add( std::move(stage) );
+		}
+
+		{
 			auto stage = std::make_unique<stages::MoveTo>("open gripper", sampling_planner);
 			stage->setGroup("gripper");
 			stage->setGoal("open");
@@ -417,6 +427,16 @@ public:
 			auto stage = std::make_unique<stages::CurrentState>("current state");
 			current_state= stage.get();
 			t.add(std::move(stage));
+		}
+
+		{
+			auto stage = std::make_unique<stages::MoveTo>("grow tall", sampling_planner);
+			stage->properties().configureInitFrom(Stage::PARENT, {"torso"});
+			stage->setGroup("torso");
+			stage->setGoal("tall");
+			stage->restrictDirection(stages::MoveTo::FORWARD);
+
+			t.add( std::move(stage) );
 		}
 
 		{
