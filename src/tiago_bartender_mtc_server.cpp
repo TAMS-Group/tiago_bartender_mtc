@@ -32,6 +32,8 @@
 #include <tiago_bartender_msgs/PlacePickAction.h>
 #include <tiago_bartender_msgs/PourAction.h>
 
+#include <control_msgs/FollowJointTrajectoryAction.h>
+
 #include <std_srvs/Empty.h>
 
 using namespace moveit::task_constructor;
@@ -598,9 +600,15 @@ public:
       ROS_INFO("execute");
 
       static ros::NodeHandle node;
-      static ros::Publisher trajectory_publisher =
+
+      /*static ros::Publisher trajectory_publisher =
           node.advertise<trajectory_msgs::JointTrajectory>(
-              "/arm_controller/command", 1, true);
+              "/arm_controller/command", 1, true);*/
+
+      static actionlib::SimpleActionClient<
+          control_msgs::FollowJointTrajectoryAction>
+          action_client("/arm_controller/follow_joint_trajectory");
+      action_client.waitForServer();
 
       for (auto &sub_trajectory : solution.sub_trajectory) {
 
@@ -655,7 +663,7 @@ public:
               joint_trajectory_2.points[pi].positions.push_back(
                   joint_trajectory.points[pi].positions[ji]);
 
-            if (!joint_trajectory.points[pi].velocities.empty())
+            /*if (!joint_trajectory.points[pi].velocities.empty())
               joint_trajectory_2.points[pi].velocities.push_back(
                   joint_trajectory.points[pi].velocities[ji]);
 
@@ -665,16 +673,32 @@ public:
 
             if (!joint_trajectory.points[pi].effort.empty())
               joint_trajectory_2.points[pi].effort.push_back(
-                  joint_trajectory.points[pi].effort[ji]);
+                  joint_trajectory.points[pi].effort[ji]);*/
           }
 
           joint_trajectory_2.points[pi].time_from_start =
-              joint_trajectory.points[pi].time_from_start + ros::Duration(5.0);
+              joint_trajectory.points[pi].time_from_start * 2.0 +
+              ros::Duration(5.0);
         }
 
         ROS_INFO("bla 5");
 
-        trajectory_publisher.publish(joint_trajectory_2);
+        // trajectory_publisher.publish(joint_trajectory_2);
+
+        control_msgs::FollowJointTrajectoryGoal goal;
+        goal.trajectory = joint_trajectory_2;
+
+        ROS_INFO("blubb 1");
+
+        action_client.sendGoal(goal);
+
+        ROS_INFO("blubb 2");
+
+        action_client.waitForResult();
+
+        ROS_INFO("blubb 3");
+
+        ROS_INFO("error code: %i", (int)action_client.getResult()->error_code);
 
         ROS_INFO("bla 6");
 
