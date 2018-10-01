@@ -1172,7 +1172,7 @@ public:
       stage->setGoal(transport_pose_);
       stage->restrictDirection(stages::MoveTo::FORWARD);
 
-      t.add(filter_upright(t, std::move(stage)));
+      t.add(std::move(stage));
     }
 
     t.enableIntrospection();
