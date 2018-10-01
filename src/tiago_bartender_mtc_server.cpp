@@ -1012,10 +1012,10 @@ public:
       if (execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS) {
         ROS_ERROR_STREAM("task execution failed and returned: "
                          << execute_.getState().toString());
-        tiago_bartender_msgs::PickResult result;
+        tiago_bartender_msgs::PlacePickResult result;
         result.result.result =
             tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
-        as_pick_.setAborted(result, "Execution failed");
+        as_place_pick_.setAborted(result, "Execution failed");
         return;
       }
     }
@@ -1215,10 +1215,10 @@ public:
       if (execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS) {
         ROS_ERROR_STREAM("task execution failed and returned: "
                          << execute_.getState().toString());
-        tiago_bartender_msgs::PickResult result;
+        tiago_bartender_msgs::PlaceResult result;
         result.result.result =
             tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
-        as_pick_.setAborted(result, "Execution failed");
+        as_place_.setAborted(result, "Execution failed");
         return;
       }
     }
