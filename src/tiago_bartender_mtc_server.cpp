@@ -35,6 +35,7 @@
 #include <control_msgs/FollowJointTrajectoryAction.h>
 
 #include <std_srvs/Empty.h>
+#include <std_msgs/Bool.h>
 
 using namespace moveit::task_constructor;
 
@@ -51,6 +52,29 @@ moveit_msgs::RobotState jointsToRS(std::vector<double> joint_positions) {
   return rs;
 }
 
+
+bool confirm_execution(){
+  ros::NodeHandle pnh("~");
+
+  bool got_result= false, result= false;
+
+  boost::function<void(const std_msgs::BoolConstPtr&)> callback=
+    [&got_result,&result](const std_msgs::BoolConstPtr& msg){
+      result= msg->data;
+      got_result= true;
+    };
+
+  ros::Subscriber sub= pnh.subscribe<std_msgs::Bool>("confirm_execution", 1, callback);
+
+  while(ros::ok() && !got_result){
+    ROS_WARN_THROTTLE(5, "waiting for confirmation to execute (or reject) planned trajectory");
+    ros::Duration(0.3).sleep();
+  }
+
+  return result;
+}
+
+
 class TiagoBartender {
 public:
   TiagoBartender()
@@ -64,13 +88,15 @@ public:
         as_place_(nh_, "tiago_place",
                   boost::bind(&TiagoBartender::place_cb, this, _1), false),
 
-        execute_("execute_task_solution", true) {
+        execute_("execute_task_solution", true),
+        require_confirm_before_execute_(true){
     ROS_INFO("waiting for task execution");
     execute_.waitForServer();
 
     ros::NodeHandle pnh("~");
 
     execute_solutions_ = pnh.param<bool>("execute", true);
+    require_confirm_before_execute_ = pnh.param<bool>("require_confirm_before_execute", true);
 
     // general parameters
     pourer_length_ = pnh.param<double>("pourer_length", 0.015);
@@ -147,6 +173,8 @@ public:
       ROS_INFO("Solutions will be executed");
     }
   }
+
+
 
   std::unique_ptr<stages::PredicateFilter>
   filter_upright(moveit::task_constructor::Task &t,
@@ -417,6 +445,14 @@ public:
     // solution.sub_trajectory.back().trajectory );
 
     if (execute_solutions_) {
+      if(require_confirm_before_execute_ && !confirm_execution()) {
+	ROS_ERROR_STREAM("trajectory execution was rejected");
+        tiago_bartender_msgs::PickResult result;
+        result.result.result =
+            tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
+        as_pick_.setAborted(result, "Execution failed");
+        return;
+      }
       moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
       execute_goal.task_solution = solution;
       execute_.sendGoal(execute_goal);
@@ -584,6 +620,14 @@ public:
     ROS_INFO("ready");
 
     if (execute_solutions_) {
+      if(require_confirm_before_execute_ && !confirm_execution()) {
+	ROS_ERROR_STREAM("trajectory execution was rejected");
+        tiago_bartender_msgs::PourResult result;
+        result.result.result =
+            tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
+        as_pour_.setAborted(result, "Execution failed");
+        return;
+      }
       /*moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
       execute_goal.task_solution = solution;
       execute_.sendGoal(execute_goal);
@@ -1002,6 +1046,14 @@ public:
     // solution.sub_trajectory.back().trajectory );
 
     if (execute_solutions_) {
+      if(require_confirm_before_execute_ && !confirm_execution()) {
+	ROS_ERROR_STREAM("trajectory execution was rejected");
+        tiago_bartender_msgs::PlacePickResult result;
+        result.result.result =
+            tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
+        as_place_pick_.setAborted(result, "Execution failed");
+        return;
+      }
       moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
       execute_goal.task_solution = solution;
       execute_.sendGoal(execute_goal);
@@ -1205,6 +1257,14 @@ public:
     // solution.sub_trajectory.back().trajectory );
 
     if (execute_solutions_) {
+      if(require_confirm_before_execute_ && !confirm_execution()) {
+	ROS_ERROR_STREAM("trajectory execution was rejected");
+        tiago_bartender_msgs::PlaceResult result;
+        result.result.result =
+            tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
+        as_place_.setAborted(result, "Execution failed");
+        return;
+      }
       moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
       execute_goal.task_solution = solution;
       execute_.sendGoal(execute_goal);
@@ -1243,6 +1303,7 @@ private:
   moveit::planning_interface::PlanningSceneInterface psi_;
 
   bool execute_solutions_;
+  bool require_confirm_before_execute_;
 
   // latest tasks are retained until new ones arrive
   // to provide ROS interfaces for introspection
