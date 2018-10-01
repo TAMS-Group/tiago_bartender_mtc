@@ -1,3 +1,4 @@
 #!/bin/sh
 
-rosrun tf static_transform_publisher .5 0 0 0 0 0 1 world base_footprint 100
+#rosrun tf static_transform_publisher -0.4 0.4 0 0 0 0 1 base_footprint world 100
+rosrun tf static_transform_publisher 0.3 -0.2 0 0 0 0 1 map odom 100
