@@ -17,19 +17,19 @@ if __name__ == '__main__':
 
     psi = moveit_commander.PlanningSceneInterface()
 
-    objects = psi.get_attached_objects(['coke'])
+    objects = psi.get_attached_objects()
 
-    if 'coke' in objects:
-        coke = objects['coke']
-
-	coke.object.operation = CollisionObject.REMOVE
+    if len(objects) > 0:
+        for o in objects.keys():
+            objects[o].object.operation = CollisionObject.REMOVE
 
         scene = moveit_msgs.msg.PlanningScene()
         scene.is_diff = True
         scene.robot_state.is_diff = True
-        scene.robot_state.attached_collision_objects.append(coke)
+        scene.robot_state.attached_collision_objects = objects.values()
         apply_planning_scene = rospy.ServiceProxy("apply_planning_scene", moveit_msgs.srv.ApplyPlanningScene)
         rs = apply_planning_scene.call(scene)
-        print(rs)
+        print('Removed attached objects:')
+        print(objects.keys())
     else:
-        print('coke object not found')
+        print('No attached objects found')
