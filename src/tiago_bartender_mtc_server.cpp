@@ -160,6 +160,15 @@ public:
     // scene_client_ =
     // nh_.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
 
+    // empty tasks to spawn ROS introspection interfaces
+    pick_task_.reset( new moveit::task_constructor::Task("pick_object") );
+
+    pour_task_.reset( new moveit::task_constructor::Task("pour_to_glass") );
+
+    place_pick_task_.reset( new moveit::task_constructor::Task("place_pick_object") );
+
+    place_task_.reset( new moveit::task_constructor::Task("place_object") );
+
     as_pick_.start();
     as_pour_.start();
     as_place_pick_.start();
@@ -200,6 +209,8 @@ public:
   void pick_cb(const tiago_bartender_msgs::PickGoalConstPtr &goal) {
     const std::string object = goal->object_id;
 
+    // reset ROS introspection before constructing the new object
+    pick_task_.reset();
     pick_task_.reset(new moveit::task_constructor::Task("pick_object"));
     Task &t = *pick_task_;
     t.loadRobotModel();
@@ -409,8 +420,6 @@ public:
       t.add(filter_upright(t, std::move(stage)));
     }
 
-    t.enableIntrospection();
-
     try {
       t.plan(1);
     } catch (InitStageException &e) {
@@ -491,6 +500,8 @@ public:
     }
     const std::string bottle = attached_objects.begin()->first;
 
+    // reset ROS introspection before constructing the new object
+    pour_task_.reset();
     pour_task_.reset(new moveit::task_constructor::Task("pour_to_glass"));
     Task &t = *pour_task_;
     t.loadRobotModel();
@@ -584,8 +595,6 @@ public:
 
       t.add(filter_upright(t, std::move(stage)));
     }
-
-    t.enableIntrospection();
 
     try {
       t.plan(1);
@@ -759,6 +768,8 @@ public:
     const std::string place_bottle = attached_objects.begin()->first;
     const std::string pick_bottle = goal->pick_object_id;
 
+    // reset ROS introspection before constructing the new object
+    place_pick_task_.reset();
     place_pick_task_.reset(
         new moveit::task_constructor::Task("place_pick_object"));
     Task &t = *place_pick_task_;
@@ -1009,8 +1020,6 @@ public:
       t.add(filter_upright(t, std::move(stage)));
     }
 
-    t.enableIntrospection();
-
     try {
       t.plan(1);
     } catch (InitStageException &e) {
@@ -1091,6 +1100,8 @@ public:
     }
     const std::string place_bottle = attached_objects.begin()->first;
 
+    // reset ROS introspection before constructing the new object
+    place_task_.reset();
     place_task_.reset(new moveit::task_constructor::Task("place_object"));
     Task &t = *place_task_;
     t.loadRobotModel();
@@ -1226,8 +1237,6 @@ public:
 
       t.add(std::move(stage));
     }
-
-    t.enableIntrospection();
 
     try {
       t.plan(1);
