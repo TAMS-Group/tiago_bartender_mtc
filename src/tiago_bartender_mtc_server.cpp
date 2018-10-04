@@ -629,7 +629,7 @@ public:
       stage->setTiltAngle(pour_angle_);
       stage->setMinPathFraction(min_pour_path_fraction_);
       stage->setPourDuration(ros::Duration(goal->pouring_duration));
-      stage->setWaypointCount(50);
+      stage->setWaypointCount(10);
       stage->setWaypointDuration(ros::Duration(pour_waypoint_duration_));
 
       geometry_msgs::Vector3Stamped pouring_axis;
