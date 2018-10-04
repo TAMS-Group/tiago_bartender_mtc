@@ -32,6 +32,11 @@
 #include <tiago_bartender_msgs/PlacePickAction.h>
 #include <tiago_bartender_msgs/PourAction.h>
 
+
+#include <rviz_marker_tools/marker_creation.h>
+
+#include <eigen_conversions/eigen_msg.h>
+
 #include <control_msgs/FollowJointTrajectoryAction.h>
 
 #include <std_srvs/Empty.h>
@@ -73,6 +78,42 @@ bool confirm_execution(){
 
   return result;
 }
+
+class GeneratePourPose : public stages::GeneratePose {
+public:
+   GeneratePourPose(std::string name) :
+       GeneratePose(std::move(name))
+       {}
+
+   void compute() {
+       if (scenes_.empty())
+           return;
+       planning_scene::PlanningSceneConstPtr scene = scenes_[0];
+       scenes_.pop_front();
+
+       auto target= properties().get<geometry_msgs::PoseStamped>("pose");
+
+       for(double angle= 0.0; angle < 2*M_PI; angle+= 0.3){
+           geometry_msgs::PoseStamped target_msg(target);
+           Eigen::Isometry3d pose;
+           tf::poseMsgToEigen(target.pose, pose);
+           pose= pose*Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ());
+           tf::poseEigenToMsg(pose, target_msg.pose);
+
+           InterfaceState state(scene);
+           state.properties().set("target_pose", target_msg);
+
+           SubTrajectory trajectory;
+           trajectory.setCost(0.0);
+           trajectory.setComment("approach angle " + std::to_string(angle));
+           rviz_marker_tools::appendFrame(trajectory.markers(), target_msg, 0.1, "pour pose");
+
+           // TODO: make InterfaceState constructor explicit
+           //spawn(std::move(scene), std::move(trajectory));
+           spawn(std::move(state), std::move(trajectory));
+       }
+   }
+};
 
 
 class TiagoBartender {
@@ -548,7 +589,7 @@ public:
 
     Stage *ik_state = nullptr;
     {
-      auto stage = std::make_unique<stages::GeneratePose>("pose above glass");
+      auto stage = std::make_unique<GeneratePourPose>("pose above glass");
       geometry_msgs::PoseStamped p;
       p.header.frame_id = container;
       p.pose.orientation.w = 1;
@@ -579,7 +620,14 @@ public:
       stage->setTiltAngle(pour_angle_);
       stage->setMinPathFraction(min_pour_path_fraction_);
       stage->setPourDuration(ros::Duration(goal->pouring_duration));
+      stage->setWaypointCount(50);
       stage->setWaypointDuration(ros::Duration(pour_waypoint_duration_));
+
+      geometry_msgs::Vector3Stamped pouring_axis;
+      pouring_axis.vector.x= -1;
+      pouring_axis.header.frame_id= "gripper_grasping_frame";
+      stage->setPouringAxis(pouring_axis);
+
       stage->properties().configureInitFrom(Stage::PARENT);
       t.add(std::move(stage));
     }
