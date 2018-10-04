@@ -27,6 +27,8 @@
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/server/simple_action_server.h>
 
+#include <pal_interaction_msgs/TtsAction.h>
+
 #include <tiago_bartender_msgs/PickAction.h>
 #include <tiago_bartender_msgs/PlaceAction.h>
 #include <tiago_bartender_msgs/PlacePickAction.h>
@@ -60,6 +62,11 @@ moveit_msgs::RobotState jointsToRS(std::vector<double> joint_positions) {
 
 bool confirm_execution(){
   ros::NodeHandle pnh("~");
+
+  actionlib::SimpleActionClient<pal_interaction_msgs::TtsAction> tts_("tts", true);
+  pal_interaction_msgs::TtsGoal tts_goal;
+  tts_goal.rawtext.text = "Oh, I know how to do this!";
+  tts_.sendGoal(tts_goal);
 
   bool got_result= false, result= false;
 
