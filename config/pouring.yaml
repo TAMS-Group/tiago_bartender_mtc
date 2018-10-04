@@ -36,4 +36,4 @@ lift_object_max_dist: 0.1
 # place offset from table
 place_surface_offset: 0.01
 # place distance in front of tiago
-place_distance: 0.9
+place_distance: 0.78
