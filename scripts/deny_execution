@@ -1,3 +1,3 @@
 #!/bin/sh
 
-rostopic pub /manipulation_server/confirm_execution std_msgs/Bool '{data: False}'
+rostopic pub -1 /manipulation_server/confirm_execution std_msgs/Bool '{data: False}'
