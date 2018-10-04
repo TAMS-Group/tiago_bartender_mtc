@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_task_constructor_msgs
 	mtc_pour
 	roscpp
-
+	pal_interaction_msgs
 	tiago_bartender_msgs
 )
 
