@@ -17,11 +17,13 @@ if __name__ == '__main__':
 
     psi = moveit_commander.PlanningSceneInterface()
 
-    objects = psi.get_objects(['coke'])
+    coke_name = sys.argv[1]
 
-    if 'coke' in objects:
+    objects = psi.get_objects([coke_name])
 
-        coke = objects['coke']
+    if coke_name in objects:
+
+        coke = objects[coke_name]
 
         coke.header.frame_id = 'gripper_grasping_frame'
 
@@ -51,7 +53,7 @@ if __name__ == '__main__':
         apply_planning_scene = rospy.ServiceProxy("apply_planning_scene", moveit_msgs.srv.ApplyPlanningScene)
         rs = apply_planning_scene.call(scene)
         print(rs)
-    elif 'coke' in psi.get_attached_objects(['coke']):
-        print('coke already attached')
+    elif coke_name in psi.get_attached_objects([coke_name]):
+        print(coke_name+'already attached')
     else:
-        print('coke object not found')
+        print(coke_name+'object not found')
