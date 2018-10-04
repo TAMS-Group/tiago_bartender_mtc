@@ -66,6 +66,7 @@ bool confirm_execution(){
   actionlib::SimpleActionClient<pal_interaction_msgs::TtsAction> tts_("tts", true);
   pal_interaction_msgs::TtsGoal tts_goal;
   tts_goal.rawtext.text = "Oh, I know how to do this!";
+  tts_goal.rawtext.lang_id = "en_GB";
   tts_.sendGoal(tts_goal);
 
   bool got_result= false, result= false;
@@ -1217,7 +1218,7 @@ public:
       p.header.frame_id = "base_footprint";
       p.pose.orientation.w = 1;
       p.pose.position.x =
-          0.9 + grasp_frame_transform_.inverse().translation().x();
+          place_distance_ + grasp_frame_transform_.inverse().translation().x();
       p.pose.position.y = 0.0;
       p.pose.position.z = table_height_ + 0.5 * bottle_height_ +
                           grasp_frame_transform_.inverse().translation().z() +
