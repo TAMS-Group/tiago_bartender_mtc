@@ -63,12 +63,17 @@ moveit_msgs::RobotState jointsToRS(std::vector<double> joint_positions) {
 bool confirm_execution(){
   ros::NodeHandle pnh("~");
 
-  actionlib::SimpleActionClient<pal_interaction_msgs::TtsAction> tts_("tts", true);
-  tts_.waitForServer();
-  pal_interaction_msgs::TtsGoal tts_goal;
-  tts_goal.rawtext.text = "I know how to do this. May I?";
-  tts_goal.rawtext.lang_id = "en_GB";
-  tts_.sendGoal(tts_goal);
+
+  if(pnh.param<bool>("request_confirm_via_tts", true)){
+    static actionlib::SimpleActionClient<pal_interaction_msgs::TtsAction> tts_("tts", true);
+
+    ROS_INFO("request confirmation via TTS action");
+    tts_.waitForServer();
+    pal_interaction_msgs::TtsGoal tts_goal;
+    tts_goal.rawtext.text = "I know how to do this. May I?";
+    tts_goal.rawtext.lang_id = "en_GB";
+    tts_.sendGoal(tts_goal);
+  }
 
   bool got_result= false, result= false;
 
@@ -117,8 +122,6 @@ public:
            trajectory.setComment("approach angle " + std::to_string(angle));
            rviz_marker_tools::appendFrame(trajectory.markers(), target_msg, 0.1, "pour pose");
 
-           // TODO: make InterfaceState constructor explicit
-           //spawn(std::move(scene), std::move(trajectory));
            spawn(std::move(state), std::move(trajectory));
        }
    }
@@ -132,9 +135,6 @@ public:
                  boost::bind(&TiagoBartender::pick_cb, this, _1), false),
         as_pour_(nh_, "tiago_pour",
                  boost::bind(&TiagoBartender::pour_cb, this, _1), false),
-        as_place_pick_(nh_, "tiago_place_pick",
-                       boost::bind(&TiagoBartender::place_pick_cb, this, _1),
-                       false),
         as_place_(nh_, "tiago_place",
                   boost::bind(&TiagoBartender::place_cb, this, _1), false),
 
@@ -216,13 +216,10 @@ public:
 
     pour_task_.reset( new moveit::task_constructor::Task("pour_to_glass") );
 
-    place_pick_task_.reset( new moveit::task_constructor::Task("place_pick_object") );
-
     place_task_.reset( new moveit::task_constructor::Task("place_object") );
 
     as_pick_.start();
     as_pour_.start();
-    as_place_pick_.start();
     as_place_.start();
 
     ROS_INFO("Bartender MTC actions are available");
@@ -256,6 +253,7 @@ public:
         });
     return std::move(valid_trajectory);
   }
+
 
   void pick_cb(const tiago_bartender_msgs::PickGoalConstPtr &goal) {
     const std::string object = goal->object_id;
@@ -536,6 +534,7 @@ public:
     as_pick_.setSucceeded(result);
   }
 
+
   void pour_cb(const tiago_bartender_msgs::PourGoalConstPtr &goal) {
     const std::string container = goal->container_id;
 
@@ -810,339 +809,6 @@ public:
     as_pour_.setSucceeded(result);
   }
 
-  void place_pick_cb(const tiago_bartender_msgs::PlacePickGoalConstPtr &goal) {
-    std::map<std::string, moveit_msgs::AttachedCollisionObject>
-        attached_objects = psi_.getAttachedObjects();
-    if (attached_objects.size() != 1) {
-      ROS_ERROR_STREAM("Invalid request for PlacePickAction - No bottle in "
-                       "gripper to place");
-      tiago_bartender_msgs::PlacePickResult result;
-      result.result.result =
-          tiago_bartender_msgs::ManipulationResult::INTERNAL_ERROR;
-      as_place_pick_.setAborted(result,
-                                "Invalid request - No bottle in gripper");
-      return;
-    }
-    const std::string place_bottle = attached_objects.begin()->first;
-    const std::string pick_bottle = goal->pick_object_id;
-
-    // reset ROS introspection before constructing the new object
-    place_pick_task_.reset();
-    place_pick_task_.reset(
-        new moveit::task_constructor::Task("place_pick_object"));
-    Task &t = *place_pick_task_;
-    t.loadRobotModel();
-
-    auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
-    sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
-
-    auto cartesian_planner = std::make_shared<solvers::CartesianPath>();
-    cartesian_planner->setMaxVelocityScaling(1.0);
-    cartesian_planner->setMaxAccelerationScaling(1.0);
-    cartesian_planner->setStepSize(.002);
-
-    t.setProperty("group", "arm_torso");
-    t.setProperty("eef", "gripper");
-    t.setProperty("gripper", "gripper");
-
-    Stage *current_state = nullptr;
-    {
-      auto _current_state =
-          std::make_unique<stages::CurrentState>("current state");
-
-      current_state = _current_state.get();
-      t.add(std::move(_current_state));
-    }
-
-    // PLACE
-
-    {
-      auto stage = std::make_unique<stages::Connect>(
-          "move to pre-place pose",
-          stages::Connect::GroupPlannerVector{{"arm_torso", sampling_planner}});
-      stage->setTimeout(15.0);
-      // stage->setPathConstraints(upright_constraint);
-      stage->properties().configureInitFrom(Stage::PARENT);
-
-      t.add(filter_upright(t, std::move(stage)));
-    }
-
-    {
-      auto stage = std::make_unique<stages::MoveRelative>("put down object",
-                                                          cartesian_planner);
-      stage->properties().set("marker_ns", "approach_place");
-      stage->properties().set("link", "gripper_grasping_frame");
-      stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-      stage->setMinMaxDistance(.08, .13);
-
-      geometry_msgs::Vector3Stamped vec;
-      vec.header.frame_id = "base_footprint";
-      vec.vector.z = -1.0;
-      stage->setDirection(vec);
-      t.add(std::move(stage));
-    }
-
-    {
-      auto stage = std::make_unique<stages::GeneratePose>("place pose");
-      // TODO: two relative poses in parallel
-      geometry_msgs::PoseStamped p;
-      p.header.frame_id = pick_bottle;
-      p.pose.orientation.w = 1;
-      p.pose.position.x = -0.1;
-      p.pose.position.y = -0.15;
-      p.pose.position.z = 0.1;
-      stage->setPose(p);
-      stage->properties().configureInitFrom(Stage::PARENT);
-
-      stage->setMonitoredStage(current_state);
-
-      auto wrapper = std::make_unique<stages::ComputeIK>(
-          "place pose kinematics", std::move(stage));
-      wrapper->setMaxIKSolutions(32);
-      wrapper->setIKFrame(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ()) *
-                              Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX()),
-                          "gripper_grasping_frame");
-      wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
-      wrapper->properties().configureInitFrom(Stage::INTERFACE,
-                                              {"target_pose"});
-      t.add(std::move(wrapper));
-    }
-
-    {
-      auto stage =
-          std::make_unique<stages::MoveTo>("release object", sampling_planner);
-      stage->properties().property("group").configureInitFrom(Stage::PARENT,
-                                                              "gripper");
-      stage->setGoal("open");
-      t.add(std::move(stage));
-    }
-
-    {
-      auto stage = std::make_unique<stages::ModifyPlanningScene>(
-          "allow gripper->object collision");
-      stage->allowCollisions(place_bottle,
-                             t.getRobotModel()
-                                 ->getJointModelGroup("gripper")
-                                 ->getLinkModelNamesWithCollisionGeometry(),
-                             false);
-      t.add(std::move(stage));
-    }
-
-    {
-      auto stage =
-          std::make_unique<stages::ModifyPlanningScene>("detach object");
-      stage->detachObject(place_bottle, "gripper_grasping_frame");
-      t.add(std::move(stage));
-    }
-
-    Stage *after_place = nullptr;
-    {
-      auto stage = std::make_unique<stages::MoveRelative>("retreat after place",
-                                                          cartesian_planner);
-      stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-      stage->setMinMaxDistance(.12, .25);
-      stage->setIKFrame("gripper_grasping_frame");
-
-      stage->properties().set("marker_ns", "post-place");
-
-      geometry_msgs::Vector3Stamped vec;
-      vec.header.frame_id = "gripper_grasping_frame";
-      vec.vector.x = -1.0;
-      stage->setDirection(vec);
-
-      after_place = stage.get();
-
-      t.add(std::move(stage));
-    }
-
-    // PICK
-
-    {
-      auto stage = std::make_unique<stages::Connect>(
-          "move to pre-grasp pose",
-          stages::Connect::GroupPlannerVector{{"arm_torso", sampling_planner}});
-      stage->properties().configureInitFrom(Stage::PARENT);
-      t.add(std::move(stage));
-    }
-
-    {
-      auto stage = std::make_unique<stages::MoveRelative>("approach object",
-                                                          cartesian_planner);
-      stage->properties().set("marker_ns", "approach");
-      stage->properties().set("link", "gripper_grasping_frame");
-      stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-      stage->setMinMaxDistance(.10, .15);
-
-      geometry_msgs::Vector3Stamped vec;
-      vec.header.frame_id = "gripper_grasping_frame";
-      vec.vector.x = 1.0;
-      stage->setDirection(vec);
-      t.add(std::move(stage));
-    }
-
-    auto grasp = std::make_unique<SerialContainer>("grasp object");
-    t.properties().exposeTo(grasp->properties(), {"eef", "gripper"});
-    grasp->properties().configureInitFrom(Stage::PARENT, {"eef", "gripper"});
-
-    Stage *ik_state = nullptr;
-    {
-      auto stage =
-          std::make_unique<stages::GenerateGraspPose>("grasp work space pose");
-      stage->properties().configureInitFrom(Stage::PARENT);
-      stage->setPreGraspPose("open");
-      stage->setObject(pick_bottle);
-      stage->setAngleDelta(M_PI / 6);
-
-      stage->setMonitoredStage(after_place);
-
-      auto wrapper =
-          std::make_unique<stages::ComputeIK>("grasp pose", std::move(stage));
-      ik_state = wrapper.get();
-      wrapper->setMaxIKSolutions(8);
-      wrapper->setMinSolutionDistance(1.0);
-      wrapper->setIKFrame(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX()) *
-                              Eigen::Translation3d(0.05, 0, -.04),
-                          "gripper_grasping_frame");
-      wrapper->properties().configureInitFrom(Stage::PARENT, {"eef"});
-      wrapper->properties().configureInitFrom(Stage::INTERFACE,
-                                              {"target_pose"});
-      grasp->insert(std::move(wrapper));
-    }
-
-    {
-      auto stage = std::make_unique<stages::ModifyPlanningScene>(
-          "allow gripper->object collision");
-      stage->allowCollisions(pick_bottle,
-                             t.getRobotModel()
-                                 ->getJointModelGroup("gripper")
-                                 ->getLinkModelNamesWithCollisionGeometry(),
-                             true);
-      grasp->insert(std::move(stage));
-    }
-
-    {
-      auto stage =
-          std::make_unique<stages::MoveTo>("close gripper", sampling_planner);
-      stage->properties().property("group").configureInitFrom(Stage::PARENT,
-                                                              "gripper");
-      stage->setGoal("grasped");
-      grasp->insert(std::move(stage));
-    }
-
-    {
-      auto stage =
-          std::make_unique<stages::ModifyPlanningScene>("attach object");
-      stage->attachObject(pick_bottle, "gripper_grasping_frame");
-      grasp->insert(std::move(stage));
-    }
-
-    t.add(std::move(grasp));
-
-    {
-      auto stage = std::make_unique<stages::ModifyPlanningScene>(
-          "allow (object,support) collision");
-      stage->allowCollisions({pick_bottle}, supports_, true);
-      t.add(std::move(stage));
-    }
-
-    {
-      auto stage = std::make_unique<stages::MoveRelative>("lift object",
-                                                          cartesian_planner);
-      stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-      stage->setMinMaxDistance(.01, .10);
-      stage->setIKFrame("gripper_grasping_frame");
-
-      stage->properties().set("marker_ns", "lift");
-
-      geometry_msgs::Vector3Stamped vec;
-      vec.header.frame_id = "base_footprint";
-      vec.vector.z = 1.0;
-      stage->setDirection(vec);
-      t.add(std::move(stage));
-    }
-
-    {
-      auto stage = std::make_unique<stages::ModifyPlanningScene>(
-          "forbid (object,support) collision");
-      stage->allowCollisions({pick_bottle}, supports_, false);
-      t.add(std::move(stage));
-    }
-
-    {
-      auto stage =
-          std::make_unique<stages::MoveTo>("move home", sampling_planner);
-      stage->properties().configureInitFrom(Stage::PARENT, {"group"});
-      stage->setGoal(transport_pose_);
-      stage->restrictDirection(stages::MoveTo::FORWARD);
-
-      t.add(filter_upright(t, std::move(stage)));
-    }
-
-    try {
-      t.plan(1);
-    } catch (InitStageException &e) {
-      ROS_ERROR_STREAM(e);
-      tiago_bartender_msgs::PlacePickResult result;
-      result.result.result =
-          tiago_bartender_msgs::ManipulationResult::INTERNAL_ERROR;
-      as_place_pick_.setAborted(result, "Initialization failed");
-      return;
-    }
-
-    if (t.numSolutions() == 0) {
-      tiago_bartender_msgs::PlacePickResult result;
-
-      if (ik_state->solutions().size() == 0) {
-        result.result.result =
-            tiago_bartender_msgs::ManipulationResult::UNREACHABLE;
-        as_place_pick_.setAborted(result,
-                                  "IK failed, is the object reachable?");
-      } else {
-        result.result.result =
-            tiago_bartender_msgs::ManipulationResult::NO_PLAN_FOUND;
-        as_place_pick_.setAborted(result, "Planning failed");
-      }
-
-      return;
-    }
-
-    moveit_task_constructor_msgs::Solution solution;
-    t.solutions().front()->fillMessage(solution);
-
-    // ROS_INFO_STREAM( "last trajectory in solution:\n" <<
-    // solution.sub_trajectory.back().trajectory );
-
-    if (execute_solutions_) {
-      if(require_confirm_before_execute_ && !confirm_execution()) {
-	ROS_ERROR_STREAM("trajectory execution was rejected");
-        tiago_bartender_msgs::PlacePickResult result;
-        result.result.result =
-            tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
-        as_place_pick_.setAborted(result, "Execution failed");
-        return;
-      }
-      moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
-      execute_goal.task_solution = solution;
-      execute_.sendGoal(execute_goal);
-      execute_.waitForResult();
-      moveit_msgs::MoveItErrorCodes execute_result =
-          execute_.getResult()->error_code;
-
-      if (execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS) {
-        ROS_ERROR_STREAM("task execution failed and returned: "
-                         << execute_.getState().toString());
-        tiago_bartender_msgs::PlacePickResult result;
-        result.result.result =
-            tiago_bartender_msgs::ManipulationResult::EXECUTION_FAILED;
-        as_place_pick_.setAborted(result, "Execution failed");
-        return;
-      }
-    }
-
-    tiago_bartender_msgs::PlacePickResult result;
-    result.result.result = tiago_bartender_msgs::ManipulationResult::SUCCESS;
-    as_place_pick_.setSucceeded(result);
-  }
 
   void place_cb(const tiago_bartender_msgs::PlaceGoalConstPtr &goal) {
     std::map<std::string, moveit_msgs::AttachedCollisionObject>
@@ -1359,8 +1025,6 @@ private:
   ros::NodeHandle nh_;
   actionlib::SimpleActionServer<tiago_bartender_msgs::PickAction> as_pick_;
   actionlib::SimpleActionServer<tiago_bartender_msgs::PourAction> as_pour_;
-  actionlib::SimpleActionServer<tiago_bartender_msgs::PlacePickAction>
-      as_place_pick_;
   actionlib::SimpleActionServer<tiago_bartender_msgs::PlaceAction> as_place_;
 
   actionlib::SimpleActionClient<
@@ -1376,7 +1040,6 @@ private:
   // to provide ROS interfaces for introspection
   moveit::task_constructor::TaskPtr pick_task_;
   moveit::task_constructor::TaskPtr pour_task_;
-  moveit::task_constructor::TaskPtr place_pick_task_;
   moveit::task_constructor::TaskPtr place_task_;
 
   moveit_msgs::Constraints upright_constraint_;
