@@ -64,8 +64,9 @@ bool confirm_execution(){
   ros::NodeHandle pnh("~");
 
   actionlib::SimpleActionClient<pal_interaction_msgs::TtsAction> tts_("tts", true);
+  tts_.waitForServer();
   pal_interaction_msgs::TtsGoal tts_goal;
-  tts_goal.rawtext.text = "Oh, I know how to do this!";
+  tts_goal.rawtext.text = "I know how to do this. May I?";
   tts_goal.rawtext.lang_id = "en_GB";
   tts_.sendGoal(tts_goal);
 
